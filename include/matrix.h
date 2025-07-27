@@ -13,15 +13,8 @@
 #include <chrono>
 #include "mmio.h"
 
-struct GraphInfo {
-    std::string graphName;
-    std::string graphPath;
-    std::string logPath;
-    std::string format;
-};
-
 template <typename ValT>
-class spMtx {
+class sparseMtx {
 public:
     size_t m = 0;
     size_t n = 0;
@@ -32,7 +25,7 @@ public:
     int* Col = nullptr;
     ValT* Val = nullptr;
 
-    spMtx(const char *filename, const std::string &format) {
+    sparseMtx(const char *filename, const std::string &format) {
         if (format == "mtx" && read_mtx_to_crs(filename)) {
             std::cout << "Can't read MTX from file\n";
             throw "Can't read MTX from file";
@@ -53,20 +46,20 @@ public:
         capacity = nz;
     }
 
-    spMtx() {}
+    sparseMtx() {}
 
-    spMtx(size_t _m, size_t _n): m(_m), n(_n) {
+    sparseMtx(size_t _m, size_t _n): m(_m), n(_n) {
         Rst = new int[m+1]();
     }
 
-    spMtx(size_t _m, size_t _n, size_t _nz): m(_m), n(_n), nz(_nz) {
+    sparseMtx(size_t _m, size_t _n, size_t _nz): m(_m), n(_n), nz(_nz) {
         Rst = new int[m+1]();
         Col = new int[nz];
         Val = new ValT[nz]();
         capacity = nz;
     }
 
-    spMtx(const spMtx &copy): m(copy.m), n(copy.n), nz(copy.nz), capacity(copy.capacity) {
+    sparseMtx(const sparseMtx &copy): m(copy.m), n(copy.n), nz(copy.nz), capacity(copy.capacity) {
         for (int i = 0; i < 4; ++i)
             matcode[i] = copy.matcode[i];
         Col = new int[nz];
@@ -79,19 +72,15 @@ public:
         }
     }
 
-    spMtx(spMtx &&mov): m(mov.m), n(mov.n), nz(mov.nz), capacity(mov.capacity) {
+    sparseMtx(sparseMtx &&mov): m(mov.m), n(mov.n), nz(mov.nz), capacity(mov.capacity) {
         for (int i = 0; i < 4; ++i)
             matcode[i] = mov.matcode[i];
-        Col = mov.Col;
-        Rst = mov.Rst;
-        Val = mov.Val;
-
-        mov.Col = nullptr;
-        mov.Rst = nullptr;
-        mov.Val = nullptr;
+        std::swap(Col, mov.Col);
+        std::swap(Rst, mov.Rst);
+        std::swap(Val, mov.Val);
     }
 
-    ~spMtx() {
+    ~sparseMtx() {
         if (Col)
             delete[] Col;
         if (Rst)
@@ -104,40 +93,40 @@ public:
         Val = nullptr;
     }
 
-    void resizeVals(size_t newNz) {
-        if (newNz > capacity) {
+    void resize_vals(size_t new_nz) {
+        if (new_nz > capacity) {
             if (Col != nullptr)
                 delete[] Col;
             if (Val != nullptr)
                 delete[] Val;
-            Col = new  int[newNz];
-            Val = new ValT[newNz];
-            capacity = newNz;
+            Col = new  int[new_nz];
+            Val = new ValT[new_nz];
+            capacity = new_nz;
         }
-        nz = newNz;
+        nz = new_nz;
     }
 
-    void resizeRows(size_t newM) {
-        if (m != newM) {
+    void resize_rows(size_t new_m) {
+        if (m != new_m) {
             if (Rst != nullptr)
                 delete[] Rst;
-            Rst = new int[newM + 1]();
-            m = newM;
+            Rst = new int[new_m + 1]();
+            m = new_m;
         }
     }
 
     // Копирование структуры матрицы без копирования значений
     template <typename ValT2>
-    void copyPattern(const spMtx<ValT2> &source) {
-        resizeRows(source.m);
+    void copy_pattern(const sparseMtx<ValT2> &source) {
+        resize_rows(source.m);
         memcpy(Rst, source.Rst, (m + 1) * sizeof(int));
         n = source.n;
 
-        resizeVals(source.nz);
+        resize_vals(source.nz);
         memcpy(Col, source.Col, nz * sizeof(int));
     }
 
-    spMtx& operator=(const spMtx &copy) {
+    sparseMtx& operator=(const sparseMtx &copy) {
         if (this == &copy)
             return *this;
 
@@ -169,7 +158,7 @@ public:
         return *this;
     }
 
-    spMtx& operator=(spMtx &&mov) {
+    sparseMtx& operator=(sparseMtx &&mov) {
         if (this == &mov)
             return *this;
 
@@ -177,19 +166,10 @@ public:
         n = mov.n;
         for (int i = 0; i < 4; ++i)
             matcode[i] = mov.matcode[i];
-        if (Col)
-            delete[] Col;
-        if (Rst)
-            delete[] Rst;
-        if (Val)
-            delete[] Val;
-        Col = mov.Col;
-        Rst = mov.Rst;
-        Val = mov.Val;
 
-        mov.Col = nullptr;
-        mov.Rst = nullptr;
-        mov.Val = nullptr;
+        std::swap(Col, mov.Col);
+        std::swap(Rst, mov.Rst);
+        std::swap(Val, mov.Val);
 
         m  = mov.m;
         n  = mov.n;
@@ -199,8 +179,8 @@ public:
         return *this;
     }
 
-    spMtx extractRows(size_t begin, size_t end) const {
-        spMtx result(end - begin, n, Rst[end] - Rst[begin]);
+    sparseMtx extractRows(size_t begin, size_t end) const {
+        sparseMtx result(end - begin, n, Rst[end] - Rst[begin]);
 
         for (size_t i = 0; i <= end - begin; ++i)
             result.Rst[i] = Rst[i + begin] - Rst[begin];
@@ -211,7 +191,7 @@ public:
         return result;
     }
 
-    bool operator==(const spMtx &other) const {
+    bool operator==(const sparseMtx &other) const {
         if (m != other.m || n != other.n || nz != other.nz)
             return false;
         for (size_t i = 0; i <= m; ++i)
@@ -273,6 +253,34 @@ public:
         fwrite(Val, sizeof(ValT), nz, fp);
 
         fclose(fp);
+        return 0;
+    }
+
+    int write_crs_to_mtx(const char *filename) {
+        mm_set_general(&matcode);
+        FILE *fp = fopen(filename, "w");
+        if (fp == NULL)
+            return -1;
+        mm_write_banner(fp, matcode);
+        fclose(fp);
+
+        std::ofstream ofstream;
+        ofstream.open(filename, std::ios::out | std::ios::app);
+        if (!ofstream.is_open())
+            return -1;
+        ofstream << m << ' ' << n << ' ' << nz << '\n';
+        if (mm_is_pattern(matcode)) {
+            for (size_t i = 0; i < m; ++i)
+                for (size_t j = Rst[i]; j < Rst[i+1]; ++j)
+                    ofstream << i+1 << ' ' << Col[j]+1 << '\n';
+        }
+        else {
+            for (size_t i = 0; i < m; ++i)
+                for (size_t j = Rst[i]; j < Rst[i+1]; ++j)
+                    ofstream << i+1 << ' ' << Col[j]+1 << ' ' << Val[j] << '\n';
+        }
+
+        ofstream.close();
         return 0;
     }
 
@@ -526,7 +534,10 @@ private:
         Val = new ValT[2*nz];
 
         size_t x, y;
-        matcode[2] = 'I';
+        mm_set_matrix(&matcode);
+        mm_set_coordinate(&matcode);
+        mm_set_integer(&matcode);
+        mm_set_general(&matcode);
         for (size_t j = 0; j < nz; ++j) {
             ifstr >> x >> y;
             TmpX[j] = x;
@@ -570,7 +581,7 @@ public:
 
     denseMtx(size_t _m, size_t _n) : m(_m), n(_n) {
         capacity = m*n;
-        Val = new ValT[capacity];
+        Val = new ValT[capacity]();
     }
     denseMtx(const denseMtx &copy) : m(copy.m), n(copy.n) {
         capacity = m*n;
@@ -583,10 +594,10 @@ public:
         mov.Val = nullptr;
     }
     template <typename ValT2>
-    denseMtx(const spMtx<ValT2> &copy) : m(copy.m), n(copy.n) {
+    denseMtx(const sparseMtx<ValT2> &copy) : m(copy.m), n(copy.n) {
         capacity = m*n;
         Val = new ValT[capacity]();
-#pragma omp parallel for schedule(dynamic)
+//#pragma omp parallel for schedule(dynamic)
         for (size_t i = 0; i < copy.m; ++i) {
             for (size_t k = copy.Rst[i]; k < copy.Rst[i+1]; ++k) {
                 size_t j = copy.Col[k];
@@ -611,7 +622,7 @@ public:
         return *this;
     }
     template <typename ValT2>
-    denseMtx& operator=(const spMtx<ValT2> &copy) {
+    denseMtx& operator=(const sparseMtx<ValT2> &copy) {
         m = copy.m;
         n = copy.n;
         if (capacity < m*n) {
@@ -620,8 +631,9 @@ public:
             capacity = m*n;
             Val = new ValT[capacity];
         }
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(dynamic, 512)
         for (size_t i = 0; i < copy.m; ++i) {
+            memset(Val + i*n, 0, n*sizeof(ValT));
             for (int k = copy.Rst[i]; k < copy.Rst[i+1]; ++k) {
                 size_t j = (size_t)copy.Col[k];
                 Val[n * i + j] = (ValT)(copy.Val[k]);
@@ -645,9 +657,18 @@ public:
         Val = nullptr;
     }
 
-    void resize(size_t newM, size_t newN) {
-        m = newM;
-        n = newN;
+    bool operator==(const denseMtx &B) {
+        if (m != B.m || n != B.n)
+            return false;
+        for (size_t i = 0; i < m*n; ++i)
+            if (Val[i] != B.Val[i])
+                return false;
+        return true;
+    }
+
+    void resize(size_t new_m, size_t new_n) {
+        m = new_m;
+        n = new_n;
         if (capacity < m*n) {
             if (Val != nullptr)
                 delete[] Val;
@@ -666,10 +687,10 @@ public:
 };
 
 template <typename ValT2, typename ValT1>
-spMtx<ValT2> convertType(const spMtx<ValT1> &source) {
-    spMtx<ValT2> result;
-
-    result.copyPattern(source);
+sparseMtx<ValT2> convertType(const sparseMtx<ValT1> &source) {
+    sparseMtx<ValT2> result;
+    
+    result.copy_pattern(source);
     for (size_t j = 0; j < source.nz; ++j)
         result.Val[j] = (ValT2)(source.Val[j]);
 
@@ -677,8 +698,8 @@ spMtx<ValT2> convertType(const spMtx<ValT1> &source) {
 }
 
 template <typename T>
-spMtx<int> build_adjacency_matrix(const spMtx<T> &Gr) {
-    spMtx<int> Res;
+sparseMtx<int> build_adjacency_matrix(const sparseMtx<T> &Gr) {
+    sparseMtx<int> Res;
     Res.m = Gr.m;
     Res.n = Gr.n;
     Res.nz = Gr.nz;
@@ -698,9 +719,9 @@ spMtx<int> build_adjacency_matrix(const spMtx<T> &Gr) {
 }
 
 template <typename T>
-spMtx<T> build_symm_from_lower(const spMtx<T> &Low) {
-    spMtx<T> Res(Low.m, Low.n, 2*Low.nz);
-    spMtx<T> Upp = transpose(Low);
+sparseMtx<T> build_symm_from_lower(const sparseMtx<T> &Low) {
+    sparseMtx<T> Res(Low.m, Low.n, 2*Low.nz);
+    sparseMtx<T> Upp = transpose(Low);
     size_t jl = 0;
     size_t ju = 0;
     size_t jr = 0;
@@ -734,8 +755,8 @@ spMtx<T> build_symm_from_lower(const spMtx<T> &Low) {
 }
 
 template <typename T>
-spMtx<T> extract_lower_triangle(const spMtx<T> &Gr) {
-    spMtx<T> Res;
+sparseMtx<T> extract_lower_triangle(const sparseMtx<T> &Gr) {
+    sparseMtx<T> Res;
 
     Res.m = Gr.m;
     Res.n = Gr.n;
@@ -763,8 +784,8 @@ spMtx<T> extract_lower_triangle(const spMtx<T> &Gr) {
 }
 
 template <typename T>
-spMtx<T> extract_upper_triangle(const spMtx<T> &Gr) {
-    spMtx<T> Res;
+sparseMtx<T> extract_upper_triangle(const sparseMtx<T> &Gr) {
+    sparseMtx<T> Res;
 
     Res.m = Gr.m;
     Res.n = Gr.n;

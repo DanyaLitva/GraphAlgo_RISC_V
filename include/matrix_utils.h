@@ -4,12 +4,12 @@
 #include <random>
 #include <set>
 
-spMtx<int> generate_mask(const size_t n, const size_t min_deg, const size_t max_deg) {
+sparseMtx<int> generate_mask(const size_t n, const size_t min_deg, const size_t max_deg) {
     std::set<int> positions;
     std::uniform_int_distribution<int> deg_distr(min_deg, max_deg);
     std::uniform_int_distribution<int> col_distr(0, n - 1);
     std::mt19937 generator{std::random_device{}()};
-    spMtx<int> mask;
+    sparseMtx<int> mask;
     mask.Rst = new int[n+1];
     mask.m = mask.n = n;
 
@@ -33,7 +33,7 @@ spMtx<int> generate_mask(const size_t n, const size_t min_deg, const size_t max_
 }
 
 template<typename T>
-void full_mask(spMtx<T> &mask, const size_t n) {
+void full_mask(sparseMtx<T> &mask, const size_t n) {
     mask.m = n;
     mask.nz = n*n;
     mask.Rst = new int[n+1];
@@ -48,8 +48,8 @@ void full_mask(spMtx<T> &mask, const size_t n) {
     }
 }
 
-spMtx<int> generate_adjacency_matrix(const size_t n, const size_t min_deg, const size_t max_deg) {
-    spMtx<int> Res = generate_mask(n, min_deg, max_deg);
+sparseMtx<int> generate_adjacency_matrix(const size_t n, const size_t min_deg, const size_t max_deg) {
+    sparseMtx<int> Res = generate_mask(n, min_deg, max_deg);
 
     Res.Val = new int[Res.nz];
     for (size_t j = 0; j < Res.nz; ++j)

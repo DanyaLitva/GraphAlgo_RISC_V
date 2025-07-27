@@ -8,155 +8,191 @@
 // declarations
 
 template <typename T>
-spMtx<T> transpose(const spMtx<T> &A);
+struct MSA {
+    static enum { UNALLOWED = 0, ALLOWED, SET } msa_states;
+    char *state;
+    T *value;
+    size_t  len;
+
+    MSA(size_t n) {
+        value = new T[n]();
+        state = new char[n]();
+        len = n;
+    }
+
+    ~MSA() {
+        delete[] value;
+        delete[] state;
+    }
+};
 
 template <typename T>
-void fuseEWiseMultAdd(const denseMtx<T> &A,
-                      const denseMtx<T> &B,
-                      const denseMtx<T> &C);
+sparseMtx<T> transpose(const sparseMtx<T> &A);
+
+template <typename T>
+denseMtx<T> transpose(const denseMtx<T> &A);
+
+template <typename T>
+void ewise_mult_and_add(const denseMtx<T> &A,
+                        const denseMtx<T> &B,
+                              denseMtx<T> &C);
 
 template <typename T, typename U> 
-void eWiseMult(const denseMtx<T> &A,
-               const denseMtx<T> &B,
-               const spMtx<U> &M,
-               const denseMtx<T> &C);
+void masked_ewise_mult(const denseMtx<T> &A,
+                       const denseMtx<T> &B,
+                       const sparseMtx<U> &M,
+                       const denseMtx<T> &C);
 
-template <typename T> denseMtx<T> transpose(const denseMtx<T> &A);
 
 template <typename T, typename U>
-void mxmm_spd(const spMtx<T> &A,
-              const denseMtx<T> &B,
-              const spMtx<U> &M,
-              denseMtx<T> &C);
+void masked_spmm(const sparseMtx<T> &A,
+                 const denseMtx<T> &B,
+                 const sparseMtx<U> &M,
+                 denseMtx<T> &C,
+                 denseMtx<T> &Cbuf);
+
+template <typename T, typename U>
+void fuse_mspgemm_ewise_mult_add(const sparseMtx<T> &A,
+                                const denseMtx<T> &W,
+                                const sparseMtx<U> &M,
+                                const denseMtx<T> &Numspd,
+                                denseMtx<T> &Bcu);
+
+template <typename T>
+void dense_mtx_mult(const denseMtx<T> &A,
+                    const denseMtx<T> &B,
+                    denseMtx<T> &C);
 
 template <typename T, typename U> 
-spMtx<T> eWiseAdd(const spMtx<T> &A,                  
-                  const spMtx<T> &B,
-                  const spMtx<U> &M);
+sparseMtx<T> eWiseAdd(const sparseMtx<T> &A,                  
+                  const sparseMtx<T> &B,
+                  const sparseMtx<U> &M);
 
 template <typename T>
-spMtx<T> add_nointersect(const spMtx<T> &A,
-                         const spMtx<T> &B);
+void sparse_add_nointersect(const sparseMtx<T> &A,
+                            const sparseMtx<T> &B,
+                            sparseMtx<T> &C,
+                            sparseMtx<T> &Cbuf);
 
 template <typename T>
-spMtx<T> eWiseAdd(const spMtx<T> &A,
-                  const spMtx<T> &B);
+sparseMtx<T> eWiseAdd(const sparseMtx<T> &A,
+                  const sparseMtx<T> &B);
 
 template <typename T>
-spMtx<T> eWiseMult(const spMtx<T> &A,
-                   const spMtx<T> &B);
+sparseMtx<T> eWiseMult(const sparseMtx<T> &A,
+                   const sparseMtx<T> &B);
 
 template <typename T, typename U>
-spMtx<T> eWiseMult(const spMtx<T> &A,
-                   const spMtx<T> &B,
-                   const spMtx<U> &M);
+sparseMtx<T> eWiseMult(const sparseMtx<T> &A,
+                   const sparseMtx<T> &B,
+                   const sparseMtx<U> &M);
 
 template <typename MatrixValT, typename ScalarT>
-spMtx<MatrixValT> multScalar(const spMtx<MatrixValT> &A,
+sparseMtx<MatrixValT> multScalar(const sparseMtx<MatrixValT> &A,
                              const ScalarT &alpha);
 
 template<typename T, typename U>
-spMtx<T> mxmm_mca(bool isParallel,
-                  const spMtx<T> &A,
-                  const spMtx<U> &B,
-                  const spMtx<T> &M);
+sparseMtx<T> mspgemm_mca(bool isParallel,
+                  const sparseMtx<T> &A,
+                  const sparseMtx<U> &B,
+                  const sparseMtx<T> &M);
 
 template<typename T, typename U>
-void mxmm_mca(bool isParallel,
-              const spMtx<T> &A,
-              const spMtx<T> &B,
-              const spMtx<U> &M,
-              spMtx<T> &C);
+void mspgemm_mca(bool isParallel,
+              const sparseMtx<T> &A,
+              const sparseMtx<T> &B,
+              const sparseMtx<U> &M,
+              sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mxmm_mca_parallel(const spMtx<T> &A,
-                        const spMtx<T> &B,
-                        const spMtx<U> &M,
-                        spMtx<T> &C);
+void _mspgemm_mca_parallel(const sparseMtx<T> &A,
+                        const sparseMtx<T> &B,
+                        const sparseMtx<U> &M,
+                        sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mxmm_mca_sequential(const spMtx<T> &A,
-                          const spMtx<T> &B,
-                          const spMtx<U> &M,
-                          spMtx<T> &C);
+void _mspgemm_mca_sequential(const sparseMtx<T> &A,
+                          const sparseMtx<T> &B,
+                          const sparseMtx<U> &M,
+                          sparseMtx<T> &C);
 
 template<typename T, typename U>
-void mxmm_msa(bool isParallel,
-              const spMtx<T> &A,
-              const spMtx<T> &B,
-              const spMtx<U> &M,
-              spMtx<T> &C);
+void mspgemm_msa(bool isParallel,
+              const sparseMtx<T> &A,
+              const sparseMtx<T> &B,
+              const sparseMtx<U> &M,
+              sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mxmm_msa_parallel(const spMtx<T> &A,
-                        const spMtx<T> &B,
-                        const spMtx<U> &M,
-                        spMtx<T> &C);
+void _mspgemm_msa_parallel(const sparseMtx<T> &A,
+                        const sparseMtx<T> &B,
+                        const sparseMtx<U> &M,
+                        sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mxmm_msa_sequential(const spMtx<T> &A,
-                          const spMtx<T> &B,
-                          const spMtx<U> &M,
-                          spMtx<T> &C);
+void _mspgemm_msa_sequential(const sparseMtx<T> &A,
+                          const sparseMtx<T> &B,
+                          const sparseMtx<U> &M,
+                          sparseMtx<T> &C);
 
 template<typename T, typename U>
-void mxmm_msa_cmask(bool isParallel,
-                    const spMtx<T> &A,
-                    const spMtx<T> &B,
-                    const spMtx<U> &M,
-                    spMtx<T> &C);
+void mspgemm_msa_cmask(bool isParallel,
+                    const sparseMtx<T> &A,
+                    const sparseMtx<T> &B,
+                    const sparseMtx<U> &M,
+                    sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mxmm_msa_cmask_parallel(const spMtx<T> &A,
-                              const spMtx<T> &B,
-                              const spMtx<U> &M,
-                              spMtx<T> &C);
+void _mspgemm_msa_cmask_parallel(const sparseMtx<T> &A,
+                              const sparseMtx<T> &B,
+                              const sparseMtx<U> &M,
+                              sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mxmm_msa_cmask_sequential(const spMtx<T> &A,
-                                const spMtx<T> &B,
-                                const spMtx<U> &M,
-                                spMtx<T> &C);
+void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A,
+                                const sparseMtx<T> &B,
+                                const sparseMtx<U> &M,
+                                sparseMtx<T> &C);
 
 template<typename T>
-spMtx<T> mxmm_heap(bool isParallel,
-                   const spMtx<T> &A,
-                   const spMtx<T> &B,
-                   const spMtx<T> &M);
+sparseMtx<T> mspgemm_heap(bool isParallel,
+                   const sparseMtx<T> &A,
+                   const sparseMtx<T> &B,
+                   const sparseMtx<T> &M);
 
 template<typename T>
-void mxmm_heap(bool isParallel,
-               const spMtx<T> &A,
-               const spMtx<T> &B,
-               const spMtx<T> &M,
-               spMtx<T> &C);
+void mspgemm_heap(bool isParallel,
+               const sparseMtx<T> &A,
+               const sparseMtx<T> &B,
+               const sparseMtx<T> &M,
+               sparseMtx<T> &C);
 
 template<typename T>
-void _mxmm_heap_parallel(const spMtx<T> &A,
-                         const spMtx<T> &B,
-                         const spMtx<T> &M,
-                         spMtx<T> &C);
+void _mspgemm_heap_parallel(const sparseMtx<T> &A,
+                         const sparseMtx<T> &B,
+                         const sparseMtx<T> &M,
+                         sparseMtx<T> &C);
 
 template<typename T>
-void _mxmm_heap_sequential(const spMtx<T> &A,
-                           const spMtx<T> &B,
-                           const spMtx<T> &M,
-                           spMtx<T> &C);
+void _mspgemm_heap_sequential(const sparseMtx<T> &A,
+                           const sparseMtx<T> &B,
+                           const sparseMtx<T> &M,
+                           sparseMtx<T> &C);
 
 template <typename T>
-void mxmm_naive(bool isParallel,
-                const spMtx<T> &A,
-                const spMtx<T> &B,
-                const spMtx<T> &M,
-                spMtx<T> &C);
+void mspgemm_naive(bool isParallel,
+                const sparseMtx<T> &A,
+                const sparseMtx<T> &B,
+                const sparseMtx<T> &M,
+                sparseMtx<T> &C);
 
 template <typename T>
-void MxV(const spMtx<T> &G,
+void MxV(const sparseMtx<T> &G,
          T *vec,
          T *res);
 
 template <typename T>
-void VxM(const spMtx<T> &G,
+void VxM(const sparseMtx<T> &G,
          T *vec,
          T *res);
 
@@ -164,8 +200,18 @@ void VxM(const spMtx<T> &G,
 // definitions
 
 template <typename T>
-spMtx<T> transpose(const spMtx<T> &A) {
-    spMtx<T> AT(A.n, A.m, A.nz);
+void dense_mtx_mult(const denseMtx<T> &A, const denseMtx<T> &B, denseMtx<T> &C) {
+    memset(C.Val, 0, C.m * C.n * sizeof(T));
+    for (size_t i = 0; i < A.m; ++i)
+        for (size_t k = 0; k < A.n; ++k)
+            for (size_t j = 0; j < B.n; ++j)
+                C.Val[i * C.n + j] += A.Val[i * A.n + k] * B.Val[k * B.n + j];
+}
+
+
+template <typename T>
+sparseMtx<T> transpose(const sparseMtx<T> &A) {
+    sparseMtx<T> AT(A.n, A.m, A.nz);
 
     // filling the column indices array and current column positions array
     for (size_t i = 0; i < A.nz; ++i)
@@ -191,7 +237,7 @@ spMtx<T> transpose(const spMtx<T> &A) {
 
 // C += A .* B
 template <typename T>
-void fuseEWiseMultAdd(const denseMtx<T> &A, const denseMtx<T> &B, denseMtx<T> &C) {
+void ewise_mult_and_add(const denseMtx<T> &A, const denseMtx<T> &B, denseMtx<T> &C) {
 #pragma omp parallel for simd schedule(static, 4096)
     for (size_t i = 0; i < A.m * A.n; ++i)
         C.Val[i] += A.Val[i] * B.Val[i];
@@ -199,9 +245,9 @@ void fuseEWiseMultAdd(const denseMtx<T> &A, const denseMtx<T> &B, denseMtx<T> &C
 
 // C<M> = A .* B
 template <typename T, typename U>
-void eWiseMult(const denseMtx<T> &A, const denseMtx<T> &B, const spMtx<U> &M, const denseMtx<T> &C) {
+void masked_ewise_mult(const denseMtx<T> &A, const denseMtx<T> &B, const sparseMtx<U> &M, denseMtx<T> &C) {
     const T zero = T(0);
-#pragma omp parallel for simd schedule(static, 64)
+#pragma omp parallel for simd
     for (size_t i = 0; i < C.m; ++i) {
         T *c_row = C.Val + i * C.n;
         for (size_t j = 0; j < C.n; ++j) {
@@ -209,7 +255,7 @@ void eWiseMult(const denseMtx<T> &A, const denseMtx<T> &B, const spMtx<U> &M, co
             ++c_row;
         }
     }
-#pragma omp parallel for schedule(dynamic, 64)
+#pragma omp parallel for schedule(dynamic, 256)
     for (size_t i = 0; i < M.m; ++i) {
         for (size_t j = M.Rst[i]; j < M.Rst[i+1]; ++j) {
             size_t idx = C.n * i + M.Col[j];
@@ -236,14 +282,13 @@ denseMtx<T> transpose(const denseMtx<T> &A) {
     return AT;
 }
 
-// C<M> = A * B
-// TODO ^T !!!!!!!!!!!!!!!!
+
 template <typename T, typename U>
-void mxmm_spd(const spMtx<T> &A, const denseMtx<T> &B, const spMtx<U> &M, denseMtx<T> &C, denseMtx<T> &Cbuf) {
+void masked_spmm(const sparseMtx<T> &A, const denseMtx<T> &B, const sparseMtx<U> &M, denseMtx<T> &C, denseMtx<T> &Cbuf) {
     const T zero = T(0);
     // denseMtx<T> BT = transpose(B);
 
-#pragma omp parallel for schedule(dynamic, 64)
+#pragma omp parallel for schedule(dynamic, 256)
     for (size_t i = 0; i < M.m; ++i) {
         // for (size_t q = M.Rst[i]; q < M.Rst[i+1]; ++q) {
         //     size_t j = M.Col[q];
@@ -270,11 +315,38 @@ void mxmm_spd(const spMtx<T> &A, const denseMtx<T> &B, const spMtx<U> &M, denseM
 }
 
 template <typename T, typename U>
-spMtx<T> eWiseAdd(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M) {
+void fuse_mspgemm_ewise_mult_add(const sparseMtx<T> &A, const denseMtx<T> &W, const sparseMtx<U> &M,
+                                 const denseMtx<T> &Numspd, denseMtx<T> &Bcu) {
+    const T zero = T(0);
+
+#pragma omp parallel for schedule(dynamic, 256)
+    for (size_t i = 0; i < M.m; ++i) {
+        for (size_t q = A.Rst[i]; q < A.Rst[i+1]; ++q) {
+            size_t j = A.Col[q];
+            T  a_val = A.Val[q];
+            T *w_row = W.Val + W.n * j;
+            T *bcu_row = Bcu.Val + Bcu.n * j;
+            T *numspd_row = Numspd.Val + Numspd.n * j;
+        #pragma omp simd
+            for (size_t k = M.Rst[i]; k < M.Rst[i+1]; ++k)
+                bcu_row[M.Col[k]] += a_val * w_row[M.Col[k]] * numspd_row[M.Col[k]];
+        }
+    }
+
+//#pragma omp parallel for
+//    for (size_t i = 0; i < W.m; ++i) {
+//        T *w_row = W.Val + W.n * i;
+//        for (size_t j = 0; j < W.n; ++j)
+//            w_row[j] = zero;
+//    }
+}
+
+template <typename T, typename U>
+sparseMtx<T> eWiseAdd(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M) {
     if (A.m != B.m || A.n != B.n)
         throw -1;
 
-    spMtx<T> C(A.m, A.n);
+    sparseMtx<T> C(A.m, A.n);
     const T zero = (T)0;
 
 #pragma omp parallel 
@@ -304,7 +376,7 @@ spMtx<T> eWiseAdd(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M) {
 
     for (int i = 0; i < A.m; ++i)
         C.Rst[i+1] += C.Rst[i];
-    C.resizeVals(C.Rst[A.m]);
+    C.resize_vals(C.Rst[A.m]);
     
 #pragma omp parallel 
     {
@@ -335,50 +407,47 @@ spMtx<T> eWiseAdd(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M) {
 }
 
 template <typename T>
-spMtx<T> add_nointersect(const spMtx<T> &A, const spMtx<T> &B) {
+void sparse_add_nointersect(const sparseMtx<T> &A, const sparseMtx<T> &B, sparseMtx<T> &C, sparseMtx<T> &Cbuf) {
     if (A.m != B.m || A.n != B.n)
         throw -1;
 
-    spMtx<T> C(A.m, A.n);
-    for (size_t i = 1; i <= A.m; ++i)
-        C.Rst[i] = A.Rst[i] + B.Rst[i];
-    C.resizeVals(C.Rst[C.m]);
+    Cbuf.resize_rows(A.m);
+    for (size_t i = 0; i <= A.m; ++i)
+        Cbuf.Rst[i] = A.Rst[i] + B.Rst[i];
+    Cbuf.resize_vals(Cbuf.Rst[C.m]);
 
 #pragma omp parallel for schedule(dynamic, 64)
     for (size_t i = 0; i < A.m; ++i) {
         int aIdx = A.Rst[i], bIdx = B.Rst[i], cIdx;
-        for (cIdx = C.Rst[i]; aIdx < A.Rst[i+1] && bIdx < B.Rst[i+1]; ++cIdx) {
+        for (cIdx = Cbuf.Rst[i]; aIdx < A.Rst[i+1] && bIdx < B.Rst[i+1]; ++cIdx) {
             if (A.Col[aIdx] < B.Col[bIdx]) {
-                C.Col[cIdx] = A.Col[aIdx];
-                C.Val[cIdx] = A.Val[aIdx++];
+                Cbuf.Col[cIdx] = A.Col[aIdx];
+                Cbuf.Val[cIdx] = A.Val[aIdx++];
             } else {
-                C.Col[cIdx] = B.Col[bIdx];
-                C.Val[cIdx] = B.Val[bIdx++];
+                Cbuf.Col[cIdx] = B.Col[bIdx];
+                Cbuf.Val[cIdx] = B.Val[bIdx++];
             }
         }
         if (aIdx < A.Rst[i+1]) {
-            memcpy(C.Col + cIdx, A.Col + aIdx, (C.Rst[i+1] - cIdx) * sizeof(int));
-            memcpy(C.Val + cIdx, A.Val + aIdx, (C.Rst[i+1] - cIdx) * sizeof(T));
+            memcpy(Cbuf.Col + cIdx, A.Col + aIdx, (Cbuf.Rst[i+1] - cIdx) * sizeof(int));
+            memcpy(Cbuf.Val + cIdx, A.Val + aIdx, (Cbuf.Rst[i+1] - cIdx) * sizeof(T));
         } else {
-            memcpy(C.Col + cIdx, B.Col + bIdx, (C.Rst[i+1] - cIdx) * sizeof(int));
-            memcpy(C.Val + cIdx, B.Val + bIdx, (C.Rst[i+1] - cIdx) * sizeof(T));
+            memcpy(Cbuf.Col + cIdx, B.Col + bIdx, (Cbuf.Rst[i+1] - cIdx) * sizeof(int));
+            memcpy(Cbuf.Val + cIdx, B.Val + bIdx, (Cbuf.Rst[i+1] - cIdx) * sizeof(T));
         }
     }
 
-    for (int i = 0; i < C.m; ++i)
-        for (int j = C.Rst[i]; j < C.Rst[i+1]-1; ++j)
-            assert(C.Col[j] < C.Col[j+1]);
-    return C;
+    std::swap(C, Cbuf);
 }
 
 
 template <typename T>
-spMtx<T> eWiseAdd(const spMtx<T> &A, const spMtx<T> &B) {
+sparseMtx<T> eWiseAdd(const sparseMtx<T> &A, const sparseMtx<T> &B) {
     if (A.m != B.m || A.n != B.n)
         throw -1;
 
-    spMtx<T> C(A.m, A.n);
-    // индекс, начиная с которого в строке идут элементы только из одной матрицы
+    sparseMtx<T> C(A.m, A.n);
+    // ќќќќќќ, ќќќќќќќ ќ ќќќќќќќќ ќ ќќќќќќ ќќќќ ќќќќќќќќ ќќќќќќ ќќ ќќќќќ ќќќќќќќ
     int *rowMergeEnd = new int[A.m]();
 
 #pragma omp parallel for schedule(dynamic)
@@ -404,7 +473,7 @@ spMtx<T> eWiseAdd(const spMtx<T> &A, const spMtx<T> &B) {
         C.Rst[i+1] += C.Rst[i];
         rowMergeEnd[i] += C.Rst[i];
     }
-    C.resizeVals(C.Rst[A.m]);
+    C.resize_vals(C.Rst[A.m]);
 
 #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < A.m; ++i) {
@@ -436,11 +505,11 @@ spMtx<T> eWiseAdd(const spMtx<T> &A, const spMtx<T> &B) {
 
 
 template <typename T>
-spMtx<T> eWiseMult(const spMtx<T> &A, const spMtx<T> &B) {
+sparseMtx<T> eWiseMult(const sparseMtx<T> &A, const sparseMtx<T> &B) {
     if (A.m != B.m || A.n != B.n)
         throw -1;
 
-    spMtx<T> C(A.m, A.n);
+    sparseMtx<T> C(A.m, A.n);
 
 #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < A.m; ++i) {
@@ -461,7 +530,7 @@ spMtx<T> eWiseMult(const spMtx<T> &A, const spMtx<T> &B) {
 
     for (size_t i = 0; i < A.m; ++i)
         C.Rst[i+1] += C.Rst[i];
-    C.resizeVals(C.Rst[C.m]);
+    C.resize_vals(C.Rst[C.m]);
 
 #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < A.m; ++i) {
@@ -484,11 +553,11 @@ spMtx<T> eWiseMult(const spMtx<T> &A, const spMtx<T> &B) {
 
 
 template <typename T, typename U>
-spMtx<T> eWiseMult(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M) {
+sparseMtx<T> eWiseMult(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M) {
     if (A.m != B.m || A.n != B.n)
         throw -1;
 
-    spMtx<T> C(A.m, A.n);
+    sparseMtx<T> C(A.m, A.n);
 
 #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < A.m; ++i) {
@@ -513,7 +582,7 @@ spMtx<T> eWiseMult(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M) {
 
     for (size_t i = 0; i < A.m; ++i)
         C.Rst[i+1] += C.Rst[i];
-    C.resizeVals(C.Rst[C.m]);
+    C.resize_vals(C.Rst[C.m]);
     
 #pragma omp parallel for schedule(dynamic)
     for (size_t i = 0; i < A.m; ++i) {
@@ -533,73 +602,61 @@ spMtx<T> eWiseMult(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M) {
 }
 
 template <typename MatrixValT, typename ScalarT>
-spMtx<MatrixValT> multScalar(const spMtx<MatrixValT> &A, const ScalarT &alpha) {
+sparseMtx<MatrixValT> multScalar(const sparseMtx<MatrixValT> &A, const ScalarT &alpha) {
 #pragma omp parallel for
     for (size_t i = 0; i < A.nz; ++i)
         A.Val[i] *= alpha;
     return A;
 }
 
-/*MSpGEMM с использованием сжатого (разрежённого) аккумулятора*/
 template <typename T>
 struct MCA {
-    static enum {ALLOWED = 0, SET} mca_states;
-    // char   *states;
     T      *values;
     size_t  len;
 
     MCA(size_t n) {
-        values = new T[n];
-        // states = new char[n];
-           len = n;
-
+        values = new T[n]();
+        len = n;
         std::memset(values, 0, len * sizeof(T));
-        // std::memset(states, 0, len * sizeof(char));
     }
 
     ~MCA() {
         delete[] values;
-        // delete[] states;
-    }
-
-    inline void clear() {
-        std::memset(values, 0, len * sizeof(T));
-        // std::memset(states, 0, len * sizeof(char));
     }
 };
 
 template<typename T, typename U>
-spMtx<T> mxmm_mca(bool isParallel, const spMtx<T> &A, const spMtx<U> &B, const spMtx<T> &M) {
-    // инициализация C
-    spMtx<T> C(A.m, B.n, M.nz);
+sparseMtx<T> mspgemm_mca(bool isParallel, const sparseMtx<T> &A, const sparseMtx<U> &B, const sparseMtx<T> &M) {
+    // ќќќќќќќќќќќќќ C
+    sparseMtx<T> C(A.m, B.n, M.nz);
     memcpy(C.Col, M.Col, M.nz * sizeof(int));
     memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
 
     if (isParallel)
-        _mxmm_mca_parallel(A, B, M, C);
+        _mspgemm_mca_parallel(A, B, M, C);
     else
-        _mxmm_mca_sequential(A, B, M, C);
+        _mspgemm_mca_sequential(A, B, M, C);
 
     return C;
 }
 
 template<typename T, typename U>
-void mxmm_mca(bool isParallel, const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
-    // инициализация C
-    C.resizeRows(M.m);
-    C.resizeVals(M.nz);
+void mspgemm_mca(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    // ќќќќќќќќќќќќќ C
+    C.resize_rows(M.m);
+    C.resize_vals(M.nz);
     C.n = M.n;
     memcpy(C.Col, M.Col, C.nz * sizeof(int));
     memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
 
     if (isParallel)
-        _mxmm_mca_parallel(A, B, M, C);
+        _mspgemm_mca_parallel(A, B, M, C);
     else
-        _mxmm_mca_sequential(A, B, M, C);
+        _mspgemm_mca_sequential(A, B, M, C);
 }
 
 template<typename T, typename U>
-void _mxmm_mca_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
+void _mspgemm_mca_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     int mca_len = 0;
     for (size_t i = 0; i < A.m; ++i)
         if (M.Rst[i+1] - M.Rst[i] > mca_len)
@@ -614,34 +671,28 @@ void _mxmm_mca_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M,
             int m_row_len = M.Rst[i+1] - M.Rst[i];
             int m_pos;
 
-            // подсчёт i-й строки матрицы C
             for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
                 int k = A.Col[t];
                 int b_pos = B.Rst[k];
                 int b_max = B.Rst[k+1];
                 T   a_val = A.Val[t];
-                // прохождение строки и обработка только входящих в маску элементов
                 m_pos = M.Rst[i];
                 for (int j = 0; j < m_row_len; ++j, ++m_pos) {
-                    // ищем следующий входящий в маску элемент
                     while (b_pos < b_max && B.Col[b_pos] < M.Col[m_pos])
                         ++b_pos;
-                    // при нахождении накапливаем значение
                     if (b_pos < b_max && B.Col[b_pos] == M.Col[m_pos])
                         accum.values[j] += a_val * B.Val[b_pos];
                 }
             }
 
-            // заполнение i-й строки матрицы C
             memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
-            // очистка аккумулятора для следующей итерации
             memset(accum.values, 0, mca_len * sizeof(T));
         }
     }
 }
 
 template<typename T, typename U>
-void _mxmm_mca_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
+void _mspgemm_mca_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     int mca_len = 0;
     for (size_t i = 0; i < A.m; ++i)
         if (M.Rst[i+1] - M.Rst[i] > mca_len)
@@ -653,82 +704,60 @@ void _mxmm_mca_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &
         int m_row_len = M.Rst[i+1] - M.Rst[i];
         int m_pos;
 
-        // подсчёт i-й строки матрицы C
+        // ќќќќќќќ i-ќ ќќќќќќ ќќќќќќќ C
         for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
             int k = A.Col[t];
             int b_pos = B.Rst[k];
             int b_max = B.Rst[k+1];
             T   a_val = A.Val[t];
-            // прохождение строки и обработка только входящих в маску элементов
+            // ќќќќќќќќќќќ ќќќќќќ ќ ќќќќќќќќќ ќќќќќќ ќќќќќќќќ ќ ќќќќќ ќќќќќќќќќ
             m_pos = M.Rst[i];
             for (int j = 0; j < m_row_len; ++j, ++m_pos) {
-                // ищем следующий входящий в маску элемент
+                // ќќќќ ќќќќќќќќќ ќќќќќќќќ ќ ќќќќќ ќќќќќќќ
                 while (b_pos < b_max && B.Col[b_pos] < M.Col[m_pos])
                     ++b_pos;
-                // при нахождении накапливаем значение
+                // ќќќ ќќќќќќќќќќ ќќќќќќќќќќќ ќќќќќќќќ
                 if (b_pos < b_max && B.Col[b_pos] == M.Col[m_pos])
                     accum.values[j] += a_val * B.Val[b_pos];
             }
         }
-        // заполнение i-й строки матрицы C
+        // ќќќќќќќќќќ i-ќ ќќќќќќ ќќќќќќќ C
         memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
-        // очистка аккумулятора для следующей итерации
+        // ќќќќќќќ ќќќќќќќќќќќќ ќќќ ќќќќќќќќќ ќќќќќќќќ
         memset(accum.values, 0, mca_len * sizeof(T));
     }
 }
 
-
-template <typename T>
-struct MSA {
-    static enum {UNALLOWED = 0, ALLOWED, SET} msa_states;
-    char   *state;
-    T      *value;
-    size_t  len;
-
-    MSA(size_t n) {
-        value = new T[n]();
-        state = new char[n]();
-        len = n;
-    }
-
-    ~MSA() {
-        delete[] value;
-        delete[] state;
-    }
-};
-
 template<typename T, typename U>
-void mxmm_msa(bool isParallel, const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
-    // инициализация C
-    C.resizeRows(M.m);
-    C.resizeVals(M.nz);
+void mspgemm_msa(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    // ќќќќќќќќќќќќќ C
+    C.resize_rows(M.m);
+    C.resize_vals(M.nz);
     C.n = M.n;
     memcpy(C.Col, M.Col, C.nz * sizeof(int));
     memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
 
     if (isParallel)
-        _mxmm_msa_parallel(A, B, M, C);
+        _mspgemm_msa_parallel(A, B, M, C);
     else
-        _mxmm_msa_sequential(A, B, M, C);
+        _mspgemm_msa_sequential(A, B, M, C);
 }
 
 template<typename T, typename U>
-void _mxmm_msa_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
+void _mspgemm_msa_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
 #pragma omp parallel
     {
         MSA<T> accum(B.n);
-        T zero = (T)0;
+        const T zero = (T)0;
 
 #pragma omp for schedule(dynamic, 32)
         for (size_t i = 0; i < A.m; ++i) {
             int m_min = M.Rst[i];
             int m_max = M.Rst[i+1];
 
-            // Выделение допустимых элементов аккумулятора
             for (int j = m_min; j < m_max; ++j)
                 accum.value[M.Col[j]] = zero;
 
-            // Подсчёт i-й строки матрицы C
             for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
                 int k = A.Col[t];
                 int b_pos = B.Rst[k];
@@ -739,28 +768,26 @@ void _mxmm_msa_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M,
                     accum.value[B.Col[j]] += a_val * B.Val[j];
             }
 
-            // Заполнение строки матрицы C и очистка аккумулятора
             for (int j = m_min; j < m_max; ++j) {
                 C.Val[j] = accum.value[M.Col[j]];
-                // accum.value[M.Col[j]] = zero;
             }
         }
     }
 }
 
 template<typename T, typename U>
-void _mxmm_msa_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
+void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     MSA<T> accum(B.n);
 
     for (size_t i = 0; i < A.m; ++i) {
         int m_min = M.Rst[i];
         int m_max = M.Rst[i+1];
 
-        // Выделение допустимых элементов аккумулятора
+        // ќќќќќќќќќ ќќќќќќќќќќ ќќќќќќќќќ ќќќќќќќќќќќќ
         for (int j = m_min; j < m_max; ++j)
             accum.state[M.Col[j]] = MSA<T>::ALLOWED;
 
-        // Подсчёт i-й строки матрицы C
+        // ќќќќќќќ i-ќ ќќќќќќ ќќќќќќќ C
         for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
             int k = A.Col[t];
             int b_pos = B.Rst[k];
@@ -777,7 +804,7 @@ void _mxmm_msa_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &
             }
         }
 
-        // Заполнение строки матрицы C и очистка аккумулятора
+        // ќќќќќќќќќќ ќќќќќќ ќќќќќќќ C ќ ќќќќќќќ ќќќќќќќќќќќќ
         for (int j = m_min; j < m_max; ++j) {
             C.Val[j] = accum.value[M.Col[j]];
             accum.state[M.Col[j]] = MSA<T>::UNALLOWED;
@@ -786,19 +813,19 @@ void _mxmm_msa_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &
 }
 
 template<typename T, typename U>
-void mxmm_msa_cmask(bool isParallel, const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
-    // инициализация C
-    C.resizeRows(M.m);
+void mspgemm_msa_cmask(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    // ќќќќќќќќќќќќќ C
+    C.resize_rows(M.m);
     C.n = M.n;
 
     if (isParallel)
-        _mxmm_msa_cmask_parallel(A, B, M, C);
+        _mspgemm_msa_cmask_parallel(A, B, M, C);
     else
-        _mxmm_msa_cmask_sequential(A, B, M, C);
+        _mspgemm_msa_cmask_sequential(A, B, M, C);
 }
 
 template<typename T, typename U>
-void _mxmm_msa_cmask_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
+void _mspgemm_msa_cmask_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
 #pragma omp parallel
     {
         MSA<T> accum(B.n);
@@ -826,8 +853,10 @@ void _mxmm_msa_cmask_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<
                 }
             }
             for (int j = m_begin; j < m_end; ++j) {
-                if (accum.state[M.Col[j]] == MSA<T>::ALLOWED)
-                    --row_nz;
+                // OPTIMIZATION 1: GET RID OF IF STATEMENT
+                row_nz -= accum.state[M.Col[j]];
+                // if (accum.state[M.Col[j]] == MSA<T>::ALLOWED)
+                //     --row_nz;
             }
             C.Rst[i+1] = row_nz;
             
@@ -841,7 +870,7 @@ void _mxmm_msa_cmask_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<
         for (int i = 1; i < A.m; ++i)
             C.Rst[i+1] += C.Rst[i];
         if (C.Rst[A.m] > C.nz)
-            C.resizeVals(C.Rst[A.m]);
+            C.resize_vals(C.Rst[A.m]);
         C.nz = C.Rst[A.m];
     }
 
@@ -863,35 +892,48 @@ void _mxmm_msa_cmask_parallel(const spMtx<T> &A, const spMtx<T> &B, const spMtx<
                 int b_end   = B.Rst[k+1];
                 T   a_val = A.Val[t];
 
+            #pragma omp simd
                 for (int j = b_begin; j < b_end; ++j) {
                     int col = B.Col[j];
-                    if (accum.state[col] == MSA<T>::ALLOWED) {
-                        accum.state[col] = MSA<T>::SET;
-                        changed_states.push_back(col);
-                        accum.value[col] = a_val * B.Val[j];
-                    }
-                    else if (accum.state[col] == MSA<T>::SET)
-                        accum.value[col] += a_val * B.Val[j];
+                    // if (accum.state[col] == MSA<T>::ALLOWED) {
+                    //     accum.state[col] = MSA<T>::SET;
+                    //     changed_states.push_back(col);
+                    // }
+
+                    accum.state[col] = MSA<T>::SET;
+
+                    accum.value[col] += a_val * B.Val[j];
                 }
             }
-            for (size_t j = m_begin; j < m_end; ++j)
+            for (size_t j = m_begin; j < m_end; ++j) {
                 accum.state[M.Col[j]] = MSA<T>::ALLOWED;
+                accum.value[M.Col[j]] = zero;
+            }
             
             int c_pos = C.Rst[i];
-            sort(changed_states.begin(), changed_states.end());
-            for (int col_idx : changed_states) {
-                C.Col[c_pos] = col_idx;
-                C.Val[c_pos++] = accum.value[col_idx];
-                accum.value[col_idx] = zero;
-                accum.state[col_idx] = MSA<T>::ALLOWED;
+            for (int i = 0; i < accum.len; ++i) {
+                if (accum.state[i] == MSA<T>::SET) {
+                    C.Col[c_pos] = i;
+                    C.Val[c_pos++] = accum.value[i];
+                    accum.state[i] = MSA<T>::ALLOWED;
+                    accum.value[i] = zero;
+                }
             }
-            changed_states.clear();
+
+            // sort(changed_states.begin(), changed_states.end());
+            // for (int col_idx : changed_states) {
+            //     C.Col[c_pos] = col_idx;
+            //     C.Val[c_pos++] = accum.value[col_idx];
+            //     accum.state[col_idx] = MSA<T>::ALLOWED;
+            //     accum.value[col_idx] = zero;
+            // }
+            // changed_states.clear();
         }
     }
 }
 
 template<typename T, typename U>
-void _mxmm_msa_cmask_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMtx<U> &M, spMtx<T> &C) {
+void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     MSA<T> accum(B.n);
     std::vector<int> changed_states;
     changed_states.reserve(B.n);
@@ -928,7 +970,7 @@ void _mxmm_msa_cmask_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMt
     for (int i = 1; i < A.m; ++i)
         C.Rst[i+1] += C.Rst[i];
     if (C.Rst[A.m] > C.nz)
-        C.resizeVals(C.Rst[A.m]);
+        C.resize_vals(C.Rst[A.m]);
     C.nz = C.Rst[A.m];
 
     constexpr T zero = T(0);
@@ -973,104 +1015,89 @@ void _mxmm_msa_cmask_sequential(const spMtx<T> &A, const spMtx<T> &B, const spMt
     }
 }
 
-/*MSpGEMM с использованием кучи*/
-
-/*Итератор для хранения информации о текущем элементе строки матрицы B*/
 template <typename T>
-struct spm_iterator {
-    int b_pos; // позиция элемента столбца матрицы B в массиве
+struct heap_iterator {
+    int b_pos;
     int b_max_pos;
-    int b_col; // индекс элемента столбца матрицы B в массиве
-    T   val;   // значение в матрице A, на которое умножается строка
+    int b_col;
+    T   val;
 
-    spm_iterator() {}
-    spm_iterator(int x, int y, int z, const T &val):
+    heap_iterator() {}
+    heap_iterator(int x, int y, int z, const T &val):
         b_pos(x), b_max_pos(y), b_col(z), val(val) {}
-    spm_iterator(const spm_iterator &it):
+    heap_iterator(const heap_iterator &it):
         b_pos(it.b_pos), b_max_pos(it.b_max_pos), b_col(it.b_col), val(it.val) {}
+    bool operator<(const heap_iterator<T> &other) const {
+        return b_col > other.b_col;
+    }
 };
 
-template <typename T>
-bool operator<(const spm_iterator<T> &it1, const spm_iterator<T> it2) {
-    return it1.b_col > it2.b_col;
-}
-
 template<typename T>
-spMtx<T> mxmm_heap(bool isParallel, const spMtx<T> &A, const spMtx<T> &B, const spMtx<T> &M) {
-    // инициализация C
-    spMtx<T> C(A.m, B.n, M.nz);
+sparseMtx<T> mspgemm_heap(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<T> &M) {
+    // ќќќќќќќќќќќќќ C
+    sparseMtx<T> C(A.m, B.n, M.nz);
     memcpy(C.Col, M.Col, M.nz * sizeof(int));
     memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
 
     if (isParallel)
-        _mxmm_heap_parallel(A, B, M, C);
+        _mspgemm_heap_parallel(A, B, M, C);
     else
-        _mxmm_heap_sequential(A, B, M, C);
+        _mspgemm_heap_sequential(A, B, M, C);
 
     return C;
 }
 
 template<typename T>
-void mxmm_heap(bool isParallel, const spMtx<T> &A, const spMtx<T> &B, const spMtx<T> &M, spMtx<T> &C) {
-    // инициализация C
-    C.resizeRows(M.m);
-    C.resizeVals(M.nz);
+void mspgemm_heap(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<T> &M, sparseMtx<T> &C) {
+    // ќќќќќќќќќќќќќ C
+    C.resize_rows(M.m);
+    C.resize_vals(M.nz);
     C.n = M.n;
     memcpy(C.Col, M.Col, C.nz * sizeof(int));
     memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
-    memcpy(C.Col, M.Col, M.nz * sizeof(int));
-    memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
 
     if (isParallel)
-        _mxmm_heap_parallel(A, B, M, C);
+        _mspgemm_heap_parallel(A, B, M, C);
     else
-        _mxmm_heap_sequential(A, B, M, C);
+        _mspgemm_heap_sequential(A, B, M, C);
 }
 
 template<typename T>
-void _mxmm_heap_parallel(const spMtx<T> &A, const spMtx<T> &B,
-                         const spMtx<T> &M, spMtx<T> &C) {
+void _mspgemm_heap_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                         const sparseMtx<T> &M, sparseMtx<T> &C) {
 
 #pragma omp parallel
     {
-        int m_pos;      // текущая позиция в маске М
-        int m_col;      // текущий столбец в маске M
-        int m_max_pos;  // граница для текущей строки маски M
-        std::priority_queue<spm_iterator<T>> heap;
-        spm_iterator<T> iter;
+        int m_pos;      // ќќќќќќќ ќќќќќќќ ќ ќќќќќ ќ
+        int m_col;      // ќќќќќќќ ќќќќќќќ ќ ќќќќќ M
+        int m_max_pos;  // ќќќќќќќ ќќќ ќќќќќќќ ќќќќќќ ќќќќќ M
+        std::priority_queue<heap_iterator<T>> heap;
+        heap_iterator<T> iter;
+        T zero(0);
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
         for (size_t i = 0; i < A.m; ++i) {
-            // заполнение кучи
-            // k - позиция начала строки A.Col[j] в массиве матрицы B
             for (int j = A.Rst[i]; j < A.Rst[i+1]; ++j) {
                 int k = B.Rst[A.Col[j]];
                 heap.emplace(k, B.Rst[A.Col[j]+1], B.Col[k], A.Val[j]);
+            }
+            for (int j = C.Rst[i]; j < C.Rst[i+1]; ++j) {
+                C.Val[j] = zero;
             }
             m_pos = M.Rst[i];
             m_col = M.Col[m_pos];
             m_max_pos = M.Rst[i+1];
 
             while (!heap.empty()) {
-                // достаём итератор с минимальным индексом столбца B
                 iter = heap.top();
                 heap.pop();
 
-                // если столбец в М меньше минимального текущего столбца в B,
-                // ищем первую не меньшую позицию.
-                // если дошли до конца, выходим
                 while (m_pos < m_max_pos && m_col < iter.b_col)
                     m_col = M.Col[++m_pos];
                 if (m_pos == m_max_pos)
                     break;
-                // при совпадении столбцов в M и B умножаем и прибавляем результат
-                // и увеличиваем итератор
                 if (m_col == iter.b_col && iter.b_pos < iter.b_max_pos)
                     C.Val[m_pos] += iter.val * B.Val[iter.b_pos];
-                // обработка вставки итератора обратно в кучу
-                // если у итератора столбец B меньше, чем текущий столбец M,
-                // увеличиваем, пока он меньше.
-                // итератор, дошедший до конца строки в B, не вставляется
 
                 iter.b_col = B.Col[++iter.b_pos];
                 while (iter.b_pos < iter.b_max_pos && iter.b_col < m_col)
@@ -1078,23 +1105,24 @@ void _mxmm_heap_parallel(const spMtx<T> &A, const spMtx<T> &B,
                 if (iter.b_pos < iter.b_max_pos)
                     heap.push(iter);
             }
-            heap = std::priority_queue<spm_iterator<T>>();
+            while (!heap.empty())
+                heap.pop();
         }
     }
 }
 
 template<typename T>
-void _mxmm_heap_sequential(const spMtx<T> &A, const spMtx<T> &B,
-                           const spMtx<T> &M, spMtx<T> &C) {
-    int m_col;      // текущий столбец в маске M
-    int m_pos;      // текущая позиция в маске М
-    int m_max_pos;  // граница для текущей строки маски M
-    std::priority_queue<spm_iterator<T>> heap;
-    spm_iterator<T> iter;
+void _mspgemm_heap_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                           const sparseMtx<T> &M, sparseMtx<T> &C) {
+    int m_col;      // ќќќќќќќ ќќќќќќќ ќ ќќќќќ M
+    int m_pos;      // ќќќќќќќ ќќќќќќќ ќ ќќќќќ ќ
+    int m_max_pos;  // ќќќќќќќ ќќќ ќќќќќќќ ќќќќќќ ќќќќќ M
+    std::priority_queue<heap_iterator<T>> heap;
+    heap_iterator<T> iter;
 
     for (size_t i = 0; i < A.m; ++i) {
-            // заполнение кучи
-            // k - позиция начала строки A.Col[j] в массиве матрицы B
+            // ќќќќќќќќќќ ќќќќ
+            // k - ќќќќќќќ ќќќќќќ ќќќќќќ A.Col[j] ќ ќќќќќќќ ќќќќќќќ B
         for (int j = A.Rst[i]; j < A.Rst[i+1]; ++j) {
             int k = B.Rst[A.Col[j]];
             heap.emplace(k, B.Rst[A.Col[j]+1], B.Col[k], A.Val[j]);
@@ -1104,26 +1132,26 @@ void _mxmm_heap_sequential(const spMtx<T> &A, const spMtx<T> &B,
         m_max_pos = M.Rst[i+1];
 
         while (!heap.empty()) {
-            // достаём итератор с минимальным индексом столбца B
+            // ќќќќќќ ќќќќќќќќ ќ ќќќќќќќќќќќ ќќќќќќќќ ќќќќќќќ B
             iter = heap.top();
             heap.pop();
 
-            // если столбец в М меньше минимального текущего столбца в B,
-            // ищем первую не меньшую позицию.
-            // если дошли до конца, выходим
+            // ќќќќ ќќќќќќќ ќ ќ ќќќќќќ ќќќќќќќќќќќќ ќќќќќќќќ ќќќќќќќ ќ B,
+            // ќќќќ ќќќќќќ ќќ ќќќќќќќ ќќќќќќќ.
+            // ќќќќ ќќќќќ ќќ ќќќќќ, ќќќќќќќ
             while (m_col < iter.b_col && m_pos < m_max_pos)
                 m_col = M.Col[++m_pos];
             if (m_pos == m_max_pos)
                 break;
 
-            // при совпадении столбцов в M и B умножаем и прибавляем результат
+            // ќќќ ќќќќќќќќќќ ќќќќќќќќ ќ M ќ B ќќќќќќќќ ќ ќќќќќќќќќќ ќќќќќќќќќ
             if (m_col == iter.b_col && iter.b_pos < iter.b_max_pos)
                 C.Val[m_pos] += iter.val * B.Val[iter.b_pos];
 
-            // обработка вставки итератора обратно в кучу
-            // если у итератора столбец B меньше, чем текущий столбец M,
-            // увеличиваем, пока он меньше.
-            // итератор, дошедший до конца строки в B, не вставляется
+            // ќќќќќќќќќ ќќќќќќќ ќќќќќќќќќ ќќќќќќќ ќ ќќќќ
+            // ќќќќ ќ ќќќќќќќќќ ќќќќќќќ B ќќќќќќ, ќќќ ќќќќќќќ ќќќќќќќ M,
+            // ќќќќќќќќќќќ, ќќќќ ќќ ќќќќќќ.
+            // ќќќќќќќќ, ќќќќќќќќ ќќ ќќќќќ ќќќќќќ ќ B, ќќ ќќќќќќќќќќќ
 
             iter.b_col = B.Col[++iter.b_pos];
             while (iter.b_pos < iter.b_max_pos && iter.b_col < m_col)
@@ -1131,15 +1159,15 @@ void _mxmm_heap_sequential(const spMtx<T> &A, const spMtx<T> &B,
             if (iter.b_pos < iter.b_max_pos)
                 heap.push(iter);
         }
-        heap = std::priority_queue<spm_iterator<T>>();
+        heap = std::priority_queue<heap_iterator<T>>();
     }
 }
 
 
 template <typename T>
-void mxmm_naive(bool isParallel, const spMtx<T> &A, const spMtx<T> &B,
-                                 const spMtx<T> &M, spMtx<T> &C) {
-    // инициализация C
+void mspgemm_naive(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B,
+                                    const sparseMtx<T> &M, sparseMtx<T> &C) {
+    // ќќќќќќќќќќќќќ C
     C.m = A.m;
     if (!C.Col)
         delete[] C.Col;
@@ -1150,7 +1178,7 @@ void mxmm_naive(bool isParallel, const spMtx<T> &A, const spMtx<T> &B,
     C.Rst = new int[A.m + 1];
     C.Rst[0] = 0;
 
-    // Символьная стадия
+    // ќќќќќќќќќќ ќќќќќќ
     if (isParallel == true) {
 #pragma omp parallel
         {
@@ -1187,7 +1215,7 @@ void mxmm_naive(bool isParallel, const spMtx<T> &A, const spMtx<T> &B,
         C.Val = new T[C.Rst[C.m]];
     }
 
-    // Численная стадия
+    // ќќќќќќќќќ ќќќќќќ
     if (isParallel == true) {
 #pragma omp parallel
         {
@@ -1238,7 +1266,7 @@ void mxmm_naive(bool isParallel, const spMtx<T> &A, const spMtx<T> &B,
         delete[] is_set;
     }
 
-    // Применение маски
+    // ќќќќќќќќќќ ќќќќќ
     T *c_wgt_new = new T[M.nz]();
     int *c_adj_new = new int[M.nz];
     memcpy(c_adj_new, M.Col, M.nz*sizeof(int));
@@ -1277,14 +1305,14 @@ void mxmm_naive(bool isParallel, const spMtx<T> &A, const spMtx<T> &B,
 }
 
 template <typename T>
-void MxV(const spMtx<T> &G, T *vec, T *res) {
+void MxV(const sparseMtx<T> &G, T *vec, T *res) {
     for (size_t i = 0; i < G.m; ++i)
         for (int j = G.Rst[i]; j < G.Xadj[i+1]; ++j)
             res[i] += G.Val[j] * vec[G.Col[j]];
 }
 
 template <typename T>
-void VxM(const spMtx<T> &G, T *vec, T *res) {
+void VxM(const sparseMtx<T> &G, T *vec, T *res) {
     for (size_t i = 0; i < G.m; ++i)
         for (int j = G.Rst[i]; j < G.Rst[i+1]; ++j)
             res[G.Col[j]] += G.Val[j] * vec[i];
