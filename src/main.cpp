@@ -1,149 +1,21 @@
 #include "matrix.h"
-#include "betweenness_centrality.h"
+#include "matrix_la.h"
+#include "matrix_utils.h"
+#include "graph_algorithms.h"
 #include <omp.h>
 #include <cmath>
 #include <ctime>
+#include <algorithm>
 #include <sstream>
 #include <functional>
-#include "bin_reader.h"
 using namespace std;
 
-template <typename T>
-using mxmOp = void(*)(bool, const spMtx<T>&, const spMtx<T>&, const spMtx<T>&, spMtx<T>&);
-
-int* triangle_counting_vertex(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel) {
-    /* PREPARE DATA */
-    int *nums_of_tr = new int[A.m];
-    int num_of_tr;
-    spMtx<int> SQ; // A^2 (A is adjacency matrix)
-
-    auto start = chrono::steady_clock::now();
-
-    /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, A, A, A, SQ);
-    // for each vertex we count the number of triangles it belongs to
-    for (size_t i = 0; i < A.m; ++i) {
-        num_of_tr = 0;
-        for (int j = SQ.Rst[i]; j < SQ.Rst[i+1]; ++j)
-            num_of_tr += SQ.Val[j];
-        nums_of_tr[i] = num_of_tr >>= 1;
-    }
-    /* TRIANGLE COUNTING ITSELF */
-
-    auto finish = chrono::steady_clock::now();
-    cout << "Time:       " << chrono::duration_cast<chrono::milliseconds>(finish - start).count() << '\n';
-
-    return nums_of_tr;
-}
-
-
-int64_t triangle_counting_masked_lu(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel) {
-    int64_t num_of_tr = 0;
-    spMtx<int> L = extract_lower_triangle(A);
-    spMtx<int> U = transpose(L);
-    spMtx<int> C;
-
-    auto start = chrono::steady_clock::now();
-
-    /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, L, U, A, C);
-
-    // Count the total number of triangles
-    for (int j = 0; j < C.Rst[C.m]; ++j)
-        num_of_tr += C.Val[j];
-    num_of_tr >>= 1;
-    /* TRIANGLE COUNTING ITSELF */
-
-    auto finish = chrono::steady_clock::now();
-    cout << "Time:       " << chrono::duration_cast<chrono::milliseconds>(finish - start).count() << " ms\n";
-    cout << "Triangles:  " << num_of_tr << '\n';
-
-    return num_of_tr;
-}
-
-
-int64_t triangle_counting_masked_sandia(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel) {
-    int64_t num_of_tr = 0;
-    spMtx<int> L = extract_lower_triangle(A);
-    spMtx<int> C;
-
-    auto start = chrono::steady_clock::now();
-
-    /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, L, L, L, C);
-
-    // Count the total number of triangles
-#pragma omp parallel for reduction(+:num_of_tr)
-    for (int j = 0; j < C.Rst[C.m]; ++j)
-        num_of_tr += C.Val[j];
-    /* TRIANGLE COUNTING ITSELF */
-
-    auto finish = chrono::steady_clock::now();
-    cout << "Time:       " << chrono::duration_cast<chrono::milliseconds>(finish - start).count() << " ms\n";
-    cout << "Triangles:  " << num_of_tr << '\n';
-
-    return num_of_tr;
-}
-
-
-/* K-TRUSS */
-spMtx<int> k_truss(const spMtx<int> &A, int k, mxmOp<int> matrixMult, bool isParallel) {
-    spMtx<int> C = A;  // a copy of adjacency matrix
-    spMtx<int> Tmp;
-    int n = A.m;
-    int totalIterationNum = 0;
-    int *tmp_Xdj = new int[n+1];
-    tmp_Xdj[0] = 0;
-
-    auto start = chrono::steady_clock::now();
-
-    for (int t = 0; t < n; ++t) {
-        // Tmp<C> = C*C
-        matrixMult(isParallel, C, C, C, Tmp);
-
-        // remove all edges included in less than (k-2) triangles
-        // and replace values of remaining entries with 1
-        int new_curr_pos = 0;
-        for (int i = 0; i < n; ++i) {
-            for (int j = Tmp.Rst[i]; j < Tmp.Rst[i+1]; ++j) {
-                if (Tmp.Val[j] >= k-2) {
-                    Tmp.Col[new_curr_pos]   = Tmp.Col[j];
-                    Tmp.Val[new_curr_pos++] = 1;
-                }
-            }
-            tmp_Xdj[i+1] = new_curr_pos;
-        }
-        memcpy(Tmp.Rst, tmp_Xdj, (n+1)*sizeof(int));
-        Tmp.nz = Tmp.Rst[n];
-
-        // check if the number of edges has changed
-        if (Tmp.nz == C.nz) {
-            totalIterationNum = ++t;
-            break;
-        }
-
-        // Assign 'Tmp' to 'C'
-        std::swap(C, Tmp);
-    }
-
-    auto finish = chrono::steady_clock::now();
-    cout << "Time:       " << chrono::duration_cast<chrono::milliseconds>(finish - start).count() << " ms\n";
-    cout << "Iterations: " << totalIterationNum << '\n';
-
-    if (C.nz < A.nz) {
-        int *new_Adj = new int[C.nz];
-        int *new_Wgt = new int[C.nz];
-        std::memcpy(new_Adj, C.Col, C.nz * sizeof(int));
-        std::memcpy(new_Wgt, C.Val, C.nz * sizeof(int));
-        delete[] C.Col;
-        delete[] C.Val;
-        C.Col = new_Adj;
-        C.Val = new_Wgt;
-    }
-
-    delete[] tmp_Xdj;
-    return C;
-}
+struct GraphInfo {
+    std::string graphName;
+    std::string graphPath;
+    std::string logPath;
+    std::string format;
+};
 
 
 GraphInfo get_graph_info(int argc, const char *argv[]) {
@@ -185,14 +57,14 @@ GraphInfo get_graph_info(int argc, const char *argv[]) {
     return info;
 }
 
-int launch_test(const spMtx<int> &gr, const GraphInfo &info, int argc, const char *argv[]) {
+int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const char *argv[]) {
     string benchmarkAlgorithm(argv[4]),
            parOrSeq(argv[5]),
            batchSizeStr;
     bool isParallel = (parOrSeq == "par");
     size_t batch_size;
-    mxmOp<int> mxm_algorithm;
-    spMtx<int> MxmResult, TestMtx = gr;
+    mspgemmAlgorithm<int> mxm_algorithm;
+    sparseMtx<int> MxmResult, TestMtx = gr;
     chrono::high_resolution_clock::time_point start, finish, default_time;
     stringstream alg_ss;
 
@@ -205,13 +77,13 @@ int launch_test(const spMtx<int> &gr, const GraphInfo &info, int argc, const cha
     else {
         string multiplicationAlgorithm(argv[6]);
         if (multiplicationAlgorithm == "naive")
-            mxm_algorithm = mxmm_naive<int>;
+            mxm_algorithm = mspgemm_naive<int>;
         if (multiplicationAlgorithm == "msa")
-            mxm_algorithm = mxmm_msa<int>;
+            mxm_algorithm = mspgemm_msa<int>;
         else if (multiplicationAlgorithm == "mca")
-            mxm_algorithm = mxmm_mca<int>;
+            mxm_algorithm = mspgemm_mca<int>;
         else if (multiplicationAlgorithm == "heap")
-            mxm_algorithm = mxmm_heap<int>;
+            mxm_algorithm = mspgemm_heap<int>;
         else {
             cerr << "incorrect input, 6-th argument: has to be 'naive', 'msa', 'mca' or 'heap')\n";
             return -7;
@@ -247,20 +119,25 @@ int launch_test(const spMtx<int> &gr, const GraphInfo &info, int argc, const cha
     }
     else if (benchmarkAlgorithm == "triangle") {
         alg_ss << "Algorithm:  triangle counting\n";
-        triangle_counting_masked_sandia(TestMtx, mxm_algorithm, isParallel);
+        triangle_counting(TestMtx, mxm_algorithm, isParallel);
     }
     else if (benchmarkAlgorithm == "bc") {
         vector<float> bcVector;
-        start = chrono::high_resolution_clock::now();
         // size_t cache_fit_size = 1747626; // to size of float matrix to fit into 20 Mb cache 
         // size_t batch_size = (cache_fit_size/Adj.m > 0) ? cache_fit_size/Adj.m : 3;
-        bcVector = betweenness_centrality_batch(isParallel, TestMtx, batch_size);
-        // vector<float> bcVector = betweenness_centrality(isParallel, TestMtx, 5);
-        // for (int i = 0; i < bcVector.size(); ++i)
-        //     cout << i << " : " << bcVector[i] << '\n';
-        // cout << '\n';
+        start = chrono::high_resolution_clock::now();
+        bcVector = brandes_batch(isParallel, TestMtx, batch_size);
         finish = chrono::high_resolution_clock::now();
+        // bcVector = betweenness_centrality(isParallel, TestMtx, 5);
+        float sum = 0.0f;
+        for (size_t i = 0; i < bcVector.size(); ++i)
+            sum += bcVector[i];
+        for (size_t i = 0; i < bcVector.size(); ++i)
+            cout << bcVector[i] << '\n';
+        
+        // cout << '\n';
         alg_ss << "Algorithm:  betweenness centrality\n" << "Batch size: " << batch_size << '\n';
+        alg_ss << "Checksum:   " << sum << '\n';
     }
     else {
         cerr << "incorrect input, 4-th argument: has to be 'triangle', 'k-truss', 'mxm' or 'bc')\n";
@@ -309,35 +186,44 @@ string get_graph_val_type(const char *filename, const GraphInfo &info) {
     return stype;
 }
 
-// argv[1] - граф
-// argv[2] - папка для вывода логов
-// argv[3] - выполняемая операция (tobinary / launch)
-// для 'launch':
-//   argv[4] - выполняемый алгоритм (triangle / k-truss / mxm / bc)
-//   argv[5] - последовательно или параллельно (seq / par)
-//   для 'bc':
-//     argv[6] - batch size (число вершин, для которых запускается алгоритм)
-//   для 'triangle' / 'k-truss' / 'mxm':
-//     argv[6] - используемый алгоритм умножения (naive / msa / mca / heap)
-//     для k-truss:
-//       argv[7] - параметр 'k' в k-truss
+// argv[1] - пїЅпїЅпїЅпїЅ
+// argv[2] - пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
+// argv[3] - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (tobinary / launch)
+// пїЅпїЅпїЅ 'launch':
+//   argv[4] - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (triangle / k-truss / mxm / bc)
+//   argv[5] - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (seq / par)
+//   пїЅпїЅпїЅ 'bc':
+//     argv[6] - batch size (пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ, пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ)
+//   пїЅпїЅпїЅ 'triangle' / 'k-truss' / 'mxm':
+//     argv[6] - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ (naive / msa / mca / heap)
+//     пїЅпїЅпїЅ k-truss:
+//       argv[7] - пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ 'k' пїЅ k-truss
 
 template <typename ValType>
 int read_graph_and_launch_test(const GraphInfo &info, int argc, const char *argv[]) {
     string action(argv[3]);
-    spMtx<ValType> gr(argv[1], info.format.c_str());
+    sparseMtx<ValType> gr(argv[1], info.format.c_str());
     cerr << "finished reading\n";
-    if (action == "tobinary") {
+    if (action == "to_bin") {
         gr.write_crs_to_bin((info.graphPath + info.graphName + ".bin").c_str());
         cerr << "finished writing to BIN\n";
         return 0;
-    } else if (action == "launch") {
+    }
+    else if (action == "to_mtx") {
+        gr.write_crs_to_mtx((info.graphPath + info.graphName + ".mtx").c_str());
+        cerr << "finished writing to MTX\n";
+        return 0;
+    }
+    else if (action == "launch") {
        return launch_test(build_adjacency_matrix(gr), info, argc, argv);
     } else {
         cerr << "incorrect input (3-nd argument has to be 'tobinary' or 'launch')\n";
         return -3;
     }
 }
+
+//#define TEST
+#ifndef TEST
 
 int main(int argc, const char* argv[]) {
     if (argc < 4) {
@@ -359,3 +245,86 @@ int main(int argc, const char* argv[]) {
 
     return 0;
 }
+#else
+void test_add_nointersect() {
+    for (int iter = 0; iter < 10; ++iter) {
+        sparseMtx<int> A = generate_adjacency_matrix(500, 20, 50),
+                   C = generate_adjacency_matrix(500, 20, 50),
+                   B(A.m, A.n, A.nz + C.nz);
+        int bi = 0;
+        B.Rst[0] = 0;
+        for (int i = 0; i < A.m; ++i) {
+            int ai = A.Rst[i];
+            for (int ci = C.Rst[i]; ci < C.Rst[i+1]; ++ci) {
+                while (ai < A.Rst[i+1] && A.Col[ai] < C.Col[ci])
+                    ++ai;
+                if (A.Col[ai] != C.Col[ci]) {
+                    B.Col[bi] = C.Col[ci];
+                    B.Val[bi++] = C.Val[ci];
+                }
+            }
+            B.Rst[i+1] = bi;
+        }
+
+        sparseMtx<int> Sum(A.m, A.n);
+        sparseMtx<int> Sumbuf(A.m, A.n);
+        add_nointersect(A, B, Sum, Sumbuf);
+
+        denseMtx<int> denseA = A, denseB = B;
+        denseMtx<int> denseSum = A;
+        for (size_t i = 0; i < A.m * A.n; ++i)
+            denseSum.Val[i] += denseB.Val[i];
+
+        denseMtx<int> spToDenseSum = Sum;
+        if (spToDenseSum == denseSum) {
+            cout << iter << ": fine\n";
+        }
+        else {
+            cout << iter << ": WRONG ANSWER!\n";
+            cout << "A:\n";
+            denseA.print();
+            cout << "B:\n";
+            denseB.print();
+        }
+    }
+}
+
+void test_spmm_cmask() {
+    for (int iter = 0; iter < 500; ++iter) {
+        sparseMtx<int> A = generate_adjacency_matrix(500, 50, 70),
+                   B = generate_adjacency_matrix(500, 50, 70),
+                   M = generate_adjacency_matrix(500, 50, 70),
+                   C(A.m, A.n);
+        mspgemm_msa_cmask(true, A, B, M, C);
+
+        denseMtx<int> denseA = A,
+            denseB = B,
+            denseM = M,
+            denseC = C;
+        for (size_t i = 0; i < A.m * A.n; ++i)
+            denseM.Val[i] = 1 - denseM.Val[i];
+        dense_mtx_mult(denseA, denseB, denseC);
+        for (size_t i = 0; i < C.m * C.n; ++i)
+            denseC.Val[i] *= denseM.Val[i];
+
+        denseMtx<int> spToDenseC = C;
+        if (spToDenseC == denseC) {
+            cout << iter << ": fine\n";
+        }
+        else {
+            cout << iter << ": WRONG ANSWER!\n";
+            cout << "A:\n";
+            denseA.print();
+            cout << "B:\n";
+            denseB.print();
+            cout << "M:\n";
+            denseM.print();
+        }
+    }
+}
+
+int main(int argc, const char *argv[]) {
+    test_add_nointersect();
+    test_spmm_cmask();
+}
+#endif
