@@ -10,7 +10,7 @@
 > //   в случае 'argv[4] == triangle' / 'k-truss' / 'mxm':  
 > //     argv[6] - вид алгоритма умножения матриц (naive / msa / mca / heap)  
 > //     также в случае 'argv[4] == k-truss':  
-> //       argv[6] - параметр 'k' в k-truss    
+> //       argv[7] - параметр 'k' в k-truss    
   
 Пример запуска:
 > ./grAlgo matrix.mtx log.txt launch mxm par
