@@ -13,4 +13,4 @@
 //       argv[7] - параметр 'k' в k-truss  
 
 Пример запуска:
-> ./grAlgo matrix.mtx log.txt launch mxm par
+> ./build/grAlgo ./graphs/G43.mtx log.txt launch mxm par mca
