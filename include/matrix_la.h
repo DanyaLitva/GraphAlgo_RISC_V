@@ -4,8 +4,8 @@
 #include <queue>
 #include <vector>
 #include <utility>
+#include <riscv_vector.h>
 
-// #include <riscv_vector.h>
 // declarations
 
 template <typename T>
