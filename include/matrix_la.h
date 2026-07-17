@@ -4,7 +4,10 @@
 #include <queue>
 #include <vector>
 #include <utility>
+
+#ifdef USE_RVV
 #include <riscv_vector.h>
+#endif
 
 // declarations
 
