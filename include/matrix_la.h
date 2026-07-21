@@ -5,7 +5,10 @@
 #include <vector>
 #include <utility>
 
-// #include <riscv_vector.h>
+#ifdef USE_RVV
+#include <riscv_vector.h>
+#endif
+
 // declarations
 
 template <typename T>
