@@ -2,7 +2,7 @@
 #include "matrix_la.h"
 using namespace std;
 
-int* triangle_counting_vertex(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel) {
+int* triangle_counting_vertex(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization) {
     /* PREPARE DATA */
     int *nums_of_tr = new int[A.m];
     int num_of_tr;
@@ -11,7 +11,7 @@ int* triangle_counting_vertex(const sparseMtx<int> &A, mspgemmAlgorithm<int> mat
     auto start = chrono::steady_clock::now();
 
     /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, A, A, A, SQ);
+    matrixMult(isParallel, isVectorization, A, A, A, SQ);
     for (size_t i = 0; i < A.m; ++i) {
         num_of_tr = 0;
         for (int j = SQ.Rst[i]; j < SQ.Rst[i+1]; ++j)
@@ -27,7 +27,7 @@ int* triangle_counting_vertex(const sparseMtx<int> &A, mspgemmAlgorithm<int> mat
 }
 
 
-int64_t triangle_counting_masked_lu(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel) {
+int64_t triangle_counting_masked_lu(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization) {
     int64_t num_of_tr = 0;
     sparseMtx<int> L = extract_lower_triangle(A);
     sparseMtx<int> U = transpose(L);
@@ -36,7 +36,7 @@ int64_t triangle_counting_masked_lu(const sparseMtx<int> &A, mspgemmAlgorithm<in
     auto start = chrono::steady_clock::now();
 
     /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, L, U, A, C);
+    matrixMult(isParallel, isVectorization, L, U, A, C);
 
     // Count the total number of triangles
     for (int j = 0; j < C.Rst[C.m]; ++j)
@@ -52,7 +52,7 @@ int64_t triangle_counting_masked_lu(const sparseMtx<int> &A, mspgemmAlgorithm<in
 }
 
 
-int64_t triangle_counting(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel) {
+int64_t triangle_counting(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization) {
     int64_t num_of_tr = 0;
     sparseMtx<int> L = extract_lower_triangle(A);
     sparseMtx<int> C;
@@ -60,7 +60,7 @@ int64_t triangle_counting(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixM
     auto start = chrono::steady_clock::now();
 
     /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, L, L, L, C);
+    matrixMult(isParallel, isVectorization, L, L, L, C);
 #pragma omp parallel for reduction(+:num_of_tr)
     for (int j = 0; j < C.Rst[C.m]; ++j)
         num_of_tr += C.Val[j];
@@ -74,7 +74,7 @@ int64_t triangle_counting(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixM
 }
 
 /* K-TRUSS */
-sparseMtx<int> k_truss(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int> matrixMult, bool isParallel) {
+sparseMtx<int> k_truss(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization) {
     sparseMtx<int> C = A;  // a copy of adjacency matrix
     sparseMtx<int> Tmp;
     int n = A.m;
@@ -87,7 +87,7 @@ sparseMtx<int> k_truss(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int> mat
     int t = 0;
     while (true) {
         // Tmp<C> = C*C
-        matrixMult(isParallel, C, C, C, Tmp);
+        matrixMult(isParallel, isVectorization, C, C, C, Tmp);
 
         // remove all edges included in less than (k-2) triangles
         // and replace values of remaining entries with 1
@@ -292,7 +292,7 @@ void brandes_forward_step(const sparseMtx<int> &AT,
     std::swap(Front, FrontTmp);
 }
 
-std::vector<float> brandes_batch(bool isParallel, const sparseMtx<int> &A, size_t batch_size) {
+std::vector<float> brandes_batch(bool isParallel, bool isVectorization, const sparseMtx<int> &A, size_t batch_size) {
     if (A.m != A.n)
         throw "non-square matrix; BC is only for square matrices";
     

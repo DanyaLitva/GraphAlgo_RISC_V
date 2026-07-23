@@ -3,7 +3,7 @@
 #include <chrono>
 using namespace std;
 
-int* triangle_counting_vertex(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel) {
+int* triangle_counting_vertex(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel, bool isVectorization) {
     /* PREPARE DATA */
     int *nums_of_tr = new int[A.m];
     int num_of_tr;
@@ -12,7 +12,7 @@ int* triangle_counting_vertex(const spMtx<int> &A, mxmOp<int> matrixMult, bool i
     auto start = chrono::steady_clock::now();
 
     /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, A, A, A, SQ);
+    matrixMult(isParallel, isVectorization, A, A, A, SQ);
     // for each vertex we count the number of triangles it belongs to
     for (size_t i = 0; i < A.m; ++i) {
         num_of_tr = 0;
@@ -29,7 +29,7 @@ int* triangle_counting_vertex(const spMtx<int> &A, mxmOp<int> matrixMult, bool i
 }
 
 
-int64_t triangle_counting_masked_lu(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel) {
+int64_t triangle_counting_masked_lu(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel, bool isVectorization) {
     int64_t num_of_tr = 0;
     spMtx<int> L = extract_lower_triangle(A);
     spMtx<int> U = transpose(L);
@@ -38,7 +38,7 @@ int64_t triangle_counting_masked_lu(const spMtx<int> &A, mxmOp<int> matrixMult, 
     auto start = chrono::steady_clock::now();
 
     /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, L, U, A, C);
+    matrixMult(isParallel, isVectorization, L, U, A, C);
 
     // Count the total number of triangles
     for (int j = 0; j < C.Rst[C.m]; ++j)
@@ -54,7 +54,7 @@ int64_t triangle_counting_masked_lu(const spMtx<int> &A, mxmOp<int> matrixMult, 
 }
 
 
-int64_t triangle_counting_masked_sandia(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel) {
+int64_t triangle_counting_masked_sandia(const spMtx<int> &A, mxmOp<int> matrixMult, bool isParallel, bool isVectorization) {
     int64_t num_of_tr = 0;
     spMtx<int> L = extract_lower_triangle(A);
     spMtx<int> C;
@@ -62,7 +62,7 @@ int64_t triangle_counting_masked_sandia(const spMtx<int> &A, mxmOp<int> matrixMu
     auto start = chrono::steady_clock::now();
 
     /* TRIANGLE COUNTING ITSELF */
-    matrixMult(isParallel, L, L, L, C);
+    matrixMult(isParallel, isVectorization, isVectorization, L, L, L, C);
 
     // Count the total number of triangles
 #pragma omp parallel for reduction(+:num_of_tr)

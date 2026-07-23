@@ -4,6 +4,9 @@
 #include <queue>
 #include <vector>
 #include <utility>
+#include <typeinfo>
+#include <iostream>
+#include <cstring>
 
 #ifdef USE_RVV
 #include <riscv_vector.h>
@@ -96,42 +99,37 @@ sparseMtx<MatrixValT> multScalar(const sparseMtx<MatrixValT> &A,
                              const ScalarT &alpha);
 
 template<typename T, typename U>
-sparseMtx<T> mspgemm_mca(bool isParallel,
-                  const sparseMtx<T> &A,
-                  const sparseMtx<U> &B,
-                  const sparseMtx<T> &M);
-
-template<typename T, typename U>
-void mspgemm_mca(bool isParallel,
-              const sparseMtx<T> &A,
-              const sparseMtx<T> &B,
-              const sparseMtx<U> &M,
-              sparseMtx<T> &C);
-
-template<typename T, typename U>
-void _mspgemm_mca_parallel(const sparseMtx<T> &A,
-                        const sparseMtx<T> &B,
-                        const sparseMtx<U> &M,
-                        sparseMtx<T> &C);
-
-template<typename T, typename U>
 void _mspgemm_mca_sequential(const sparseMtx<T> &A,
                           const sparseMtx<T> &B,
                           const sparseMtx<U> &M,
                           sparseMtx<T> &C);
 
 template<typename T, typename U>
-void mspgemm_msa(bool isParallel,
+void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A,
+                               const sparseMtx<T> &B,
+                               const sparseMtx<U> &M,
+                               sparseMtx<T> &C);
+
+template<typename T, typename U>
+void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A,
+                                    const sparseMtx<T> &B,
+                                    const sparseMtx<U> &M,
+                                    sparseMtx<T> &C);
+
+template<typename T, typename U>
+sparseMtx<T> mspgemm_mca(bool isParallel,
+                  bool isVectorization,
+                  const sparseMtx<T> &A,
+                  const sparseMtx<U> &B,
+                  const sparseMtx<T> &M);
+
+template<typename T, typename U>
+void mspgemm_mca(bool isParallel,
+              bool isVectorization,
               const sparseMtx<T> &A,
               const sparseMtx<T> &B,
               const sparseMtx<U> &M,
               sparseMtx<T> &C);
-
-template<typename T, typename U>
-void _mspgemm_msa_parallel(const sparseMtx<T> &A,
-                        const sparseMtx<T> &B,
-                        const sparseMtx<U> &M,
-                        sparseMtx<T> &C);
 
 template<typename T, typename U>
 void _mspgemm_msa_sequential(const sparseMtx<T> &A,
@@ -140,17 +138,24 @@ void _mspgemm_msa_sequential(const sparseMtx<T> &A,
                           sparseMtx<T> &C);
 
 template<typename T, typename U>
-void mspgemm_msa_cmask(bool isParallel,
-                    const sparseMtx<T> &A,
-                    const sparseMtx<T> &B,
-                    const sparseMtx<U> &M,
-                    sparseMtx<T> &C);
+void _mspgemm_msa_parallel_scalar(const sparseMtx<T> &A,
+                               const sparseMtx<T> &B,
+                               const sparseMtx<U> &M,
+                               sparseMtx<T> &C);
 
 template<typename T, typename U>
-void _mspgemm_msa_cmask_parallel(const sparseMtx<T> &A,
-                              const sparseMtx<T> &B,
-                              const sparseMtx<U> &M,
-                              sparseMtx<T> &C);
+void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A,
+                                    const sparseMtx<T> &B,
+                                    const sparseMtx<U> &M,
+                                    sparseMtx<T> &C);
+
+template<typename T, typename U>
+void mspgemm_msa(bool isParallel,
+              bool isVectorization,
+              const sparseMtx<T> &A,
+              const sparseMtx<T> &B,
+              const sparseMtx<U> &M,
+              sparseMtx<T> &C);
 
 template<typename T, typename U>
 void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A,
@@ -158,24 +163,25 @@ void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A,
                                 const sparseMtx<U> &M,
                                 sparseMtx<T> &C);
 
-template<typename T>
-sparseMtx<T> mspgemm_heap(bool isParallel,
-                   const sparseMtx<T> &A,
-                   const sparseMtx<T> &B,
-                   const sparseMtx<T> &M);
+template<typename T, typename U>
+void _mspgemm_msa_cmask_parallel_scalar(const sparseMtx<T> &A,
+                                      const sparseMtx<T> &B,
+                                      const sparseMtx<U> &M,
+                                      sparseMtx<T> &C);
 
-template<typename T>
-void mspgemm_heap(bool isParallel,
-               const sparseMtx<T> &A,
-               const sparseMtx<T> &B,
-               const sparseMtx<T> &M,
-               sparseMtx<T> &C);
+template<typename T, typename U>
+void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<T> &A,
+                                          const sparseMtx<T> &B,
+                                          const sparseMtx<U> &M,
+                                          sparseMtx<T> &C);
 
-template<typename T>
-void _mspgemm_heap_parallel(const sparseMtx<T> &A,
-                         const sparseMtx<T> &B,
-                         const sparseMtx<T> &M,
-                         sparseMtx<T> &C);
+template<typename T, typename U>
+void mspgemm_msa_cmask(bool isParallel,
+                    bool isVectorization,
+                    const sparseMtx<T> &A,
+                    const sparseMtx<T> &B,
+                    const sparseMtx<U> &M,
+                    sparseMtx<T> &C);
 
 template<typename T>
 void _mspgemm_heap_sequential(const sparseMtx<T> &A,
@@ -183,8 +189,54 @@ void _mspgemm_heap_sequential(const sparseMtx<T> &A,
                            const sparseMtx<T> &M,
                            sparseMtx<T> &C);
 
+template<typename T>
+void _mspgemm_heap_parallel_scalar(const sparseMtx<T> &A,
+                                const sparseMtx<T> &B,
+                                const sparseMtx<T> &M,
+                                sparseMtx<T> &C);
+
+template<typename T>
+void _mspgemm_heap_parallel_vectorized(const sparseMtx<T> &A,
+                                     const sparseMtx<T> &B,
+                                     const sparseMtx<T> &M,
+                                     sparseMtx<T> &C);
+
+template<typename T>
+sparseMtx<T> mspgemm_heap(bool isParallel,
+                   bool isVectorization,
+                   const sparseMtx<T> &A,
+                   const sparseMtx<T> &B,
+                   const sparseMtx<T> &M);
+
+template<typename T>
+void mspgemm_heap(bool isParallel,
+               bool isVectorization,
+               const sparseMtx<T> &A,
+               const sparseMtx<T> &B,
+               const sparseMtx<T> &M,
+               sparseMtx<T> &C);
+
+template <typename T>
+void _mspgemm_naive_sequential(const sparseMtx<T> &A,
+                            const sparseMtx<T> &B,
+                            const sparseMtx<T> &M,
+                            sparseMtx<T> &C);
+
+template <typename T>
+void _mspgemm_naive_parallel_scalar(const sparseMtx<T> &A,
+                                 const sparseMtx<T> &B,
+                                 const sparseMtx<T> &M,
+                                 sparseMtx<T> &C);
+
+template <typename T>
+void _mspgemm_naive_parallel_vectorized(const sparseMtx<T> &A,
+                                      const sparseMtx<T> &B,
+                                      const sparseMtx<T> &M,
+                                      sparseMtx<T> &C);
+
 template <typename T>
 void mspgemm_naive(bool isParallel,
+                bool isVectorization,
                 const sparseMtx<T> &A,
                 const sparseMtx<T> &B,
                 const sparseMtx<T> &M,
@@ -451,7 +503,7 @@ sparseMtx<T> eWiseAdd(const sparseMtx<T> &A, const sparseMtx<T> &B) {
         throw -1;
 
     sparseMtx<T> C(A.m, A.n);
-    // ,           
+    // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½, ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
     int *rowMergeEnd = new int[A.m]();
 
 #pragma omp parallel for schedule(dynamic)
@@ -629,38 +681,42 @@ struct MCA {
     }
 };
 
+// MCA sequential
 template<typename T, typename U>
-sparseMtx<T> mspgemm_mca(bool isParallel, const sparseMtx<T> &A, const sparseMtx<U> &B, const sparseMtx<T> &M) {
-    //  C
-    sparseMtx<T> C(A.m, B.n, M.nz);
-    memcpy(C.Col, M.Col, M.nz * sizeof(int));
-    memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
+void _mspgemm_mca_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    int mca_len = 0;
+    for (size_t i = 0; i < A.m; ++i)
+        if (M.Rst[i+1] - M.Rst[i] > mca_len)
+            mca_len = M.Rst[i+1] - M.Rst[i];
 
-    if (isParallel)
-        _mspgemm_mca_parallel(A, B, M, C);
-    else
-        _mspgemm_mca_sequential(A, B, M, C);
+    MCA<T> accum(mca_len);
 
-    return C;
+    for (size_t i = 0; i < A.m; ++i) {
+        int m_row_len = M.Rst[i+1] - M.Rst[i];
+        int m_pos;
+
+        for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
+            int k = A.Col[t];
+            int b_pos = B.Rst[k];
+            int b_max = B.Rst[k+1];
+            T   a_val = A.Val[t];
+            m_pos = M.Rst[i];
+            for (int j = 0; j < m_row_len; ++j, ++m_pos) {
+                while (b_pos < b_max && B.Col[b_pos] < M.Col[m_pos])
+                    ++b_pos;
+                if (b_pos < b_max && B.Col[b_pos] == M.Col[m_pos])
+                    accum.values[j] += a_val * B.Val[b_pos];
+            }
+        }
+        memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
+        memset(accum.values, 0, mca_len * sizeof(T));
+    }
 }
 
+// MCA parallel scalar
 template<typename T, typename U>
-void mspgemm_mca(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    //  C
-    C.resize_rows(M.m);
-    C.resize_vals(M.nz);
-    C.n = M.n;
-    memcpy(C.Col, M.Col, C.nz * sizeof(int));
-    memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
-
-    if (isParallel)
-        _mspgemm_mca_parallel(A, B, M, C);
-    else
-        _mspgemm_mca_sequential(A, B, M, C);
-}
-
-template<typename T, typename U>
-void _mspgemm_mca_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    std::cerr << "Scalar\n";
     int mca_len = 0;
     for (size_t i = 0; i < A.m; ++i)
         if (M.Rst[i+1] - M.Rst[i] > mca_len)
@@ -695,60 +751,95 @@ void _mspgemm_mca_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const s
     }
 }
 
+// MCA parallel vectorized (generic)
 template<typename T, typename U>
-void _mspgemm_mca_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    int mca_len = 0;
-    for (size_t i = 0; i < A.m; ++i)
-        if (M.Rst[i+1] - M.Rst[i] > mca_len)
-            mca_len = M.Rst[i+1] - M.Rst[i];
+void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    std::cerr << "Vectorization no spec\n";
+    _mspgemm_mca_parallel_scalar(A, B, M, C);
+}
 
-    MCA<T> accum(mca_len);
+// MCA parallel vectorized specialization for int
+template<typename U>
+inline void _mspgemm_mca_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+    std::cerr << "Vectorization spec int\n";
+    _mspgemm_mca_parallel_scalar(A, B, M, C);
+}
 
-    for (size_t i = 0; i < A.m; ++i) {
-        int m_row_len = M.Rst[i+1] - M.Rst[i];
-        int m_pos;
+// MCA dispatchers
+template<typename T, typename U>
+sparseMtx<T> mspgemm_mca(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<U> &B, const sparseMtx<T> &M) {
+    sparseMtx<T> C(A.m, B.n, M.nz);
+    memcpy(C.Col, M.Col, M.nz * sizeof(int));
+    memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
 
-        //  i-   C
-        for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
-            int k = A.Col[t];
-            int b_pos = B.Rst[k];
-            int b_max = B.Rst[k+1];
-            T   a_val = A.Val[t];
-            //         
-            m_pos = M.Rst[i];
-            for (int j = 0; j < m_row_len; ++j, ++m_pos) {
-                //      
-                while (b_pos < b_max && B.Col[b_pos] < M.Col[m_pos])
-                    ++b_pos;
-                //    
-                if (b_pos < b_max && B.Col[b_pos] == M.Col[m_pos])
-                    accum.values[j] += a_val * B.Val[b_pos];
-            }
-        }
-        //  i-   C
-        memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
-        //     
-        memset(accum.values, 0, mca_len * sizeof(T));
-    }
+    if (!isParallel)
+        _mspgemm_mca_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_mca_parallel_vectorized(A, B, M, C);
+    else
+        _mspgemm_mca_parallel_scalar(A, B, M, C);
+
+    return C;
 }
 
 template<typename T, typename U>
-void mspgemm_msa(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    //  C
+void mspgemm_mca(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     C.resize_rows(M.m);
     C.resize_vals(M.nz);
     C.n = M.n;
     memcpy(C.Col, M.Col, C.nz * sizeof(int));
     memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
 
-    if (isParallel)
-        _mspgemm_msa_parallel(A, B, M, C);
+    if (!isParallel)
+        _mspgemm_mca_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_mca_parallel_vectorized(A, B, M, C);
     else
-        _mspgemm_msa_sequential(A, B, M, C);
+        _mspgemm_mca_parallel_scalar(A, B, M, C);
 }
 
+// MSA sequential
 template<typename T, typename U>
-void _mspgemm_msa_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    MSA<T> accum(B.n);
+
+    for (size_t i = 0; i < A.m; ++i) {
+        int m_min = M.Rst[i];
+        int m_max = M.Rst[i+1];
+
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        for (int j = m_min; j < m_max; ++j)
+            accum.state[M.Col[j]] = MSA<T>::ALLOWED;
+
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ i-ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ C
+        for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
+            int k = A.Col[t];
+            int b_pos = B.Rst[k];
+            int b_max = B.Rst[k+1];
+            T   a_val = A.Val[t];
+
+            for (int j = b_pos; j < b_max; ++j) {
+                int b_col = B.Col[j];
+                if (accum.state[b_col] == MSA<T>::ALLOWED) {
+                    accum.state[b_col] = MSA<T>::SET;
+                    accum.value[b_col] = a_val * B.Val[j];
+                } else if (accum.state[b_col] == MSA<T>::SET)
+                    accum.value[b_col] += a_val * B.Val[j];
+            }
+        }
+
+        // ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ C ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½
+        for (int j = m_min; j < m_max; ++j) {
+            C.Val[j] = accum.value[M.Col[j]];
+            accum.state[M.Col[j]] = MSA<T>::UNALLOWED;
+        }
+    }
+}
+
+// MSA parallel scalar
+template<typename T, typename U>
+void _mspgemm_msa_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    std::cerr << "Scalar\n";
 #pragma omp parallel
     {
         MSA<T> accum(B.n);
@@ -779,163 +870,38 @@ void _mspgemm_msa_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const s
     }
 }
 
+// MSA parallel vectorized (generic)
 template<typename T, typename U>
-void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    MSA<T> accum(B.n);
-
-    for (size_t i = 0; i < A.m; ++i) {
-        int m_min = M.Rst[i];
-        int m_max = M.Rst[i+1];
-
-        //    
-        for (int j = m_min; j < m_max; ++j)
-            accum.state[M.Col[j]] = MSA<T>::ALLOWED;
-
-        //  i-   C
-        for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
-            int k = A.Col[t];
-            int b_pos = B.Rst[k];
-            int b_max = B.Rst[k+1];
-            T   a_val = A.Val[t];
-
-            for (int j = b_pos; j < b_max; ++j) {
-                int b_col = B.Col[j];
-                if (accum.state[b_col] == MSA<T>::ALLOWED) {
-                    accum.state[b_col] = MSA<T>::SET;
-                    accum.value[b_col] = a_val * B.Val[j];
-                } else if (accum.state[b_col] == MSA<T>::SET)
-                    accum.value[b_col] += a_val * B.Val[j];
-            }
-        }
-
-        //    C   
-        for (int j = m_min; j < m_max; ++j) {
-            C.Val[j] = accum.value[M.Col[j]];
-            accum.state[M.Col[j]] = MSA<T>::UNALLOWED;
-        }
-    }
+void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    std::cerr << "Vectorization no spec\n";
+    _mspgemm_msa_parallel_scalar(A, B, M, C);
 }
 
+// MSA parallel vectorized specialization for int
+template<typename U>
+inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+    std::cerr << "Vectorization spec int\n";
+    _mspgemm_msa_parallel_scalar(A, B, M, C);
+}
+
+// MSA dispatcher
 template<typename T, typename U>
-void mspgemm_msa_cmask(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    //  C
+void mspgemm_msa(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     C.resize_rows(M.m);
+    C.resize_vals(M.nz);
     C.n = M.n;
+    memcpy(C.Col, M.Col, C.nz * sizeof(int));
+    memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
 
-    if (isParallel)
-        _mspgemm_msa_cmask_parallel(A, B, M, C);
+    if (!isParallel)
+        _mspgemm_msa_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_msa_parallel_vectorized(A, B, M, C);
     else
-        _mspgemm_msa_cmask_sequential(A, B, M, C);
+        _mspgemm_msa_parallel_scalar(A, B, M, C);
 }
 
-template<typename T, typename U>
-void _mspgemm_msa_cmask_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-#pragma omp parallel
-    {
-        MSA<T> accum(B.n);
-        std::vector<int> changed_states;
-        changed_states.reserve(B.n);
-        
-#pragma omp for schedule(dynamic, 64)
-        for (size_t i = 0; i < A.m; ++i) {
-            int m_begin = M.Rst[i];
-            int m_end   = M.Rst[i+1];
-            int row_nz = 0;
-
-            for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
-                int k = A.Col[t];
-                int b_begin = B.Rst[k];
-                int b_end   = B.Rst[k+1];
-
-                for (int j = b_begin; j < b_end; ++j) {
-                    int col = B.Col[j];
-                    if (accum.state[col] == MSA<T>::UNALLOWED) {
-                        accum.state[col] = MSA<T>::ALLOWED;
-                        changed_states.push_back(col);
-                        ++row_nz;
-                    }
-                }
-            }
-            for (int j = m_begin; j < m_end; ++j) {
-                // OPTIMIZATION 1: GET RID OF IF STATEMENT
-                row_nz -= accum.state[M.Col[j]];
-                // if (accum.state[M.Col[j]] == MSA<T>::ALLOWED)
-                //     --row_nz;
-            }
-            C.Rst[i+1] = row_nz;
-            
-            for (int col_idx: changed_states)
-                accum.state[col_idx] = MSA<T>::UNALLOWED;
-            changed_states.clear();
-        }
-#pragma omp single
-    {
-        C.Rst[0] = 0;
-        for (int i = 1; i < A.m; ++i)
-            C.Rst[i+1] += C.Rst[i];
-        if (C.Rst[A.m] > C.nz)
-            C.resize_vals(C.Rst[A.m]);
-        C.nz = C.Rst[A.m];
-    }
-
-    constexpr T zero = T(0);
-    for (size_t i = 0; i < accum.len; ++i)
-        accum.state[i] = MSA<T>::ALLOWED;
-
-#pragma omp for schedule(dynamic, 256)
-        for (size_t i = 0; i < A.m; ++i) {
-            int m_begin = M.Rst[i];
-            int m_end   = M.Rst[i+1];
-
-            for (size_t j = m_begin; j < m_end; ++j)
-                accum.state[M.Col[j]] = MSA<T>::UNALLOWED;
-
-            for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
-                int k = A.Col[t];
-                int b_begin = B.Rst[k];
-                int b_end   = B.Rst[k+1];
-                T   a_val = A.Val[t];
-
-            #pragma omp simd
-                for (int j = b_begin; j < b_end; ++j) {
-                    int col = B.Col[j];
-                    // if (accum.state[col] == MSA<T>::ALLOWED) {
-                    //     accum.state[col] = MSA<T>::SET;
-                    //     changed_states.push_back(col);
-                    // }
-
-                    accum.state[col] = MSA<T>::SET;
-
-                    accum.value[col] += a_val * B.Val[j];
-                }
-            }
-            for (size_t j = m_begin; j < m_end; ++j) {
-                accum.state[M.Col[j]] = MSA<T>::ALLOWED;
-                accum.value[M.Col[j]] = zero;
-            }
-            
-            int c_pos = C.Rst[i];
-            for (int i = 0; i < accum.len; ++i) {
-                if (accum.state[i] == MSA<T>::SET) {
-                    C.Col[c_pos] = i;
-                    C.Val[c_pos++] = accum.value[i];
-                    accum.state[i] = MSA<T>::ALLOWED;
-                    accum.value[i] = zero;
-                }
-            }
-
-            // sort(changed_states.begin(), changed_states.end());
-            // for (int col_idx : changed_states) {
-            //     C.Col[c_pos] = col_idx;
-            //     C.Val[c_pos++] = accum.value[col_idx];
-            //     accum.state[col_idx] = MSA<T>::ALLOWED;
-            //     accum.value[col_idx] = zero;
-            // }
-            // changed_states.clear();
-        }
-    }
-}
-
+// MSA cmask sequential
 template<typename T, typename U>
 void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     MSA<T> accum(B.n);
@@ -1019,62 +985,196 @@ void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
     }
 }
 
-template <typename T>
-struct heap_iterator {
-    int b_pos;
-    int b_max_pos;
-    int b_col;
-    T   val;
-
-    heap_iterator() {}
-    heap_iterator(int x, int y, int z, const T &val):
-        b_pos(x), b_max_pos(y), b_col(z), val(val) {}
-    heap_iterator(const heap_iterator &it):
-        b_pos(it.b_pos), b_max_pos(it.b_max_pos), b_col(it.b_col), val(it.val) {}
-    bool operator<(const heap_iterator<T> &other) const {
-        return b_col > other.b_col;
-    }
-};
-
-template<typename T>
-sparseMtx<T> mspgemm_heap(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<T> &M) {
-    //  C
-    sparseMtx<T> C(A.m, B.n, M.nz);
-    memcpy(C.Col, M.Col, M.nz * sizeof(int));
-    memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
-
-    if (isParallel)
-        _mspgemm_heap_parallel(A, B, M, C);
-    else
-        _mspgemm_heap_sequential(A, B, M, C);
-
-    return C;
-}
-
-template<typename T>
-void mspgemm_heap(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<T> &M, sparseMtx<T> &C) {
-    //  C
-    C.resize_rows(M.m);
-    C.resize_vals(M.nz);
-    C.n = M.n;
-    memcpy(C.Col, M.Col, C.nz * sizeof(int));
-    memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
-
-    if (isParallel)
-        _mspgemm_heap_parallel(A, B, M, C);
-    else
-        _mspgemm_heap_sequential(A, B, M, C);
-}
-
-template<typename T>
-void _mspgemm_heap_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B,
-                         const sparseMtx<T> &M, sparseMtx<T> &C) {
-
+// MSA cmask parallel scalar
+template<typename T, typename U>
+void _mspgemm_msa_cmask_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    std::cerr << "Scalar\n";
 #pragma omp parallel
     {
-        int m_pos;      //     
-        int m_col;      //     M
-        int m_max_pos;  //      M
+        MSA<T> accum(B.n);
+        std::vector<int> changed_states;
+        changed_states.reserve(B.n);
+        
+#pragma omp for schedule(dynamic, 64)
+        for (size_t i = 0; i < A.m; ++i) {
+            int m_begin = M.Rst[i];
+            int m_end   = M.Rst[i+1];
+            int row_nz = 0;
+
+            for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
+                int k = A.Col[t];
+                int b_begin = B.Rst[k];
+                int b_end   = B.Rst[k+1];
+
+                for (int j = b_begin; j < b_end; ++j) {
+                    int col = B.Col[j];
+                    if (accum.state[col] == MSA<T>::UNALLOWED) {
+                        accum.state[col] = MSA<T>::ALLOWED;
+                        changed_states.push_back(col);
+                        ++row_nz;
+                    }
+                }
+            }
+            for (int j = m_begin; j < m_end; ++j) {
+                row_nz -= accum.state[M.Col[j]];
+            }
+            C.Rst[i+1] = row_nz;
+            
+            for (int col_idx: changed_states)
+                accum.state[col_idx] = MSA<T>::UNALLOWED;
+            changed_states.clear();
+        }
+#pragma omp single
+    {
+        C.Rst[0] = 0;
+        for (int i = 1; i < A.m; ++i)
+            C.Rst[i+1] += C.Rst[i];
+        if (C.Rst[A.m] > C.nz)
+            C.resize_vals(C.Rst[A.m]);
+        C.nz = C.Rst[A.m];
+    }
+
+    constexpr T zero = T(0);
+    for (size_t i = 0; i < accum.len; ++i)
+        accum.state[i] = MSA<T>::ALLOWED;
+
+#pragma omp for schedule(dynamic, 256)
+        for (size_t i = 0; i < A.m; ++i) {
+            int m_begin = M.Rst[i];
+            int m_end   = M.Rst[i+1];
+
+            for (size_t j = m_begin; j < m_end; ++j)
+                accum.state[M.Col[j]] = MSA<T>::UNALLOWED;
+
+            for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
+                int k = A.Col[t];
+                int b_begin = B.Rst[k];
+                int b_end   = B.Rst[k+1];
+                T   a_val = A.Val[t];
+
+            #pragma omp simd
+                for (int j = b_begin; j < b_end; ++j) {
+                    int col = B.Col[j];
+                    accum.state[col] = MSA<T>::SET;
+                    accum.value[col] += a_val * B.Val[j];
+                }
+            }
+            for (size_t j = m_begin; j < m_end; ++j) {
+                accum.state[M.Col[j]] = MSA<T>::ALLOWED;
+                accum.value[M.Col[j]] = zero;
+            }
+            
+            int c_pos = C.Rst[i];
+            for (int i = 0; i < accum.len; ++i) {
+                if (accum.state[i] == MSA<T>::SET) {
+                    C.Col[c_pos] = i;
+                    C.Val[c_pos++] = accum.value[i];
+                    accum.state[i] = MSA<T>::ALLOWED;
+                    accum.value[i] = zero;
+                }
+            }
+        }
+    }
+}
+
+// MSA cmask parallel vectorized (generic)
+template<typename T, typename U>
+void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    std::cerr << "Vectorization no spec\n";
+    _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
+}
+
+// MSA cmask parallel vectorized specialization for int
+template<typename U>
+inline void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+    std::cerr << "Vectorization spec int\n";
+    _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
+}
+
+// MSA cmask dispatcher
+template<typename T, typename U>
+void mspgemm_msa_cmask(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+    C.resize_rows(M.m);
+    C.n = M.n;
+
+    if (!isParallel)
+        _mspgemm_msa_cmask_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_msa_cmask_parallel_vectorized(A, B, M, C);
+    else
+        _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
+}
+
+template <typename T>
+struct heap_iterator {
+  int b_pos;
+  int b_max_pos;
+  int b_col;
+  T   val;
+
+  heap_iterator() {}
+  heap_iterator(int x, int y, int z, const T& val) :
+    b_pos(x), b_max_pos(y), b_col(z), val(val) {
+  }
+  heap_iterator(const heap_iterator& it) :
+    b_pos(it.b_pos), b_max_pos(it.b_max_pos), b_col(it.b_col), val(it.val) {
+  }
+  bool operator<(const heap_iterator<T>& other) const {
+    return b_col > other.b_col;
+  }
+};
+
+// Heap sequential
+template<typename T>
+void _mspgemm_heap_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                           const sparseMtx<T> &M, sparseMtx<T> &C) {
+    int m_col;
+    int m_pos;
+    int m_max_pos;
+    std::priority_queue<heap_iterator<T>> heap;
+    heap_iterator<T> iter;
+
+    for (size_t i = 0; i < A.m; ++i) {
+        for (int j = A.Rst[i]; j < A.Rst[i+1]; ++j) {
+            int k = B.Rst[A.Col[j]];
+            heap.emplace(k, B.Rst[A.Col[j]+1], B.Col[k], A.Val[j]);
+        }
+        m_pos = M.Rst[i];
+        m_col = M.Col[m_pos];
+        m_max_pos = M.Rst[i+1];
+
+        while (!heap.empty()) {
+            iter = heap.top();
+            heap.pop();
+
+            while (m_col < iter.b_col && m_pos < m_max_pos)
+                m_col = M.Col[++m_pos];
+            if (m_pos == m_max_pos)
+                break;
+
+            if (m_col == iter.b_col && iter.b_pos < iter.b_max_pos)
+                C.Val[m_pos] += iter.val * B.Val[iter.b_pos];
+
+            iter.b_col = B.Col[++iter.b_pos];
+            while (iter.b_pos < iter.b_max_pos && iter.b_col < m_col)
+                iter.b_col = B.Col[++iter.b_pos];
+            if (iter.b_pos < iter.b_max_pos)
+                heap.push(iter);
+        }
+        heap = std::priority_queue<heap_iterator<T>>();
+    }
+}
+
+// Heap parallel scalar
+template<typename T>
+void _mspgemm_heap_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                                const sparseMtx<T> &M, sparseMtx<T> &C) {
+    std::cerr << "Scalar\n";
+#pragma omp parallel
+    {
+        int m_pos;
+        int m_col;
+        int m_max_pos;
         std::priority_queue<heap_iterator<T>> heap;
         heap_iterator<T> iter;
         T zero(0);
@@ -1115,140 +1215,159 @@ void _mspgemm_heap_parallel(const sparseMtx<T> &A, const sparseMtx<T> &B,
     }
 }
 
+// Heap parallel vectorized (generic)
 template<typename T>
-void _mspgemm_heap_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
-                           const sparseMtx<T> &M, sparseMtx<T> &C) {
-    int m_col;      //     M
-    int m_pos;      //     
-    int m_max_pos;  //      M
-    std::priority_queue<heap_iterator<T>> heap;
-    heap_iterator<T> iter;
-
-    for (size_t i = 0; i < A.m; ++i) {
-            //  
-            // k -    A.Col[j]    B
-        for (int j = A.Rst[i]; j < A.Rst[i+1]; ++j) {
-            int k = B.Rst[A.Col[j]];
-            heap.emplace(k, B.Rst[A.Col[j]+1], B.Col[k], A.Val[j]);
-        }
-        m_pos = M.Rst[i];
-        m_col = M.Col[m_pos];
-        m_max_pos = M.Rst[i+1];
-
-        while (!heap.empty()) {
-            //       B
-            iter = heap.top();
-            heap.pop();
-
-            //          B,
-            //     .
-            //    , 
-            while (m_col < iter.b_col && m_pos < m_max_pos)
-                m_col = M.Col[++m_pos];
-            if (m_pos == m_max_pos)
-                break;
-
-            //     M  B    
-            if (m_col == iter.b_col && iter.b_pos < iter.b_max_pos)
-                C.Val[m_pos] += iter.val * B.Val[iter.b_pos];
-
-            //      
-            //     B ,    M,
-            // ,   .
-            // ,      B,  
-
-            iter.b_col = B.Col[++iter.b_pos];
-            while (iter.b_pos < iter.b_max_pos && iter.b_col < m_col)
-                iter.b_col = B.Col[++iter.b_pos];
-            if (iter.b_pos < iter.b_max_pos)
-                heap.push(iter);
-        }
-        heap = std::priority_queue<heap_iterator<T>>();
-    }
+void _mspgemm_heap_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                                     const sparseMtx<T> &M, sparseMtx<T> &C) {
+    std::cerr << "Vectorization no spec\n";
+    _mspgemm_heap_parallel_scalar(A, B, M, C);
 }
 
+// Heap parallel vectorized specialization for int
+template<>
+inline void _mspgemm_heap_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B,
+                                     const sparseMtx<int> &M, sparseMtx<int> &C) {
+    std::cerr << "Vectorization spec int\n";
+    _mspgemm_heap_parallel_scalar(A, B, M, C);
+}
 
+// Heap dispatchers
+template<typename T>
+sparseMtx<T> mspgemm_heap(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<T> &M) {
+    sparseMtx<T> C(A.m, B.n, M.nz);
+    memcpy(C.Col, M.Col, M.nz * sizeof(int));
+    memcpy(C.Rst, M.Rst, (M.m + 1) * sizeof(int));
+
+    if (!isParallel)
+        _mspgemm_heap_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_heap_parallel_vectorized(A, B, M, C);
+    else
+        _mspgemm_heap_parallel_scalar(A, B, M, C);
+
+    return C;
+}
+
+template<typename T>
+void mspgemm_heap(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<T> &M, sparseMtx<T> &C) {
+    C.resize_rows(M.m);
+    C.resize_vals(M.nz);
+    C.n = M.n;
+    memcpy(C.Col, M.Col, C.nz * sizeof(int));
+    memcpy(C.Rst, M.Rst, (C.m + 1) * sizeof(int));
+
+    if (!isParallel)
+        _mspgemm_heap_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_heap_parallel_vectorized(A, B, M, C);
+    else
+        _mspgemm_heap_parallel_scalar(A, B, M, C);
+}
+
+// Naive sequential
 template <typename T>
-void mspgemm_naive(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B,
-                                    const sparseMtx<T> &M, sparseMtx<T> &C) {
-    //  C
+void _mspgemm_naive_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                            const sparseMtx<T> &M, sparseMtx<T> &C) {
     C.m = A.m;
-    if (!C.Col)
-        delete[] C.Col;
-    if (!C.Val)
-        delete[] C.Val;
-    if (!C.Rst)
-        delete[] C.Rst;
     C.Rst = new int[A.m + 1];
     C.Rst[0] = 0;
 
-    //  
-    if (isParallel == true) {
-#pragma omp parallel
-        {
-            int count;
-            char *is_set = new char[A.m]();
-#pragma omp for schedule(dynamic)
-            for (size_t i = 0; i < A.m; ++i) {
-                count = 0;
-                for (int k = A.Rst[i]; k < A.Rst[i+1]; ++k)
-                    for (int j = B.Rst[A.Col[k]]; j < B.Rst[A.Col[k] + 1]; ++j)
-                        is_set[B.Col[j]] = 1;
-                for (int k = 0; k < A.m; ++k)
-                    if (is_set[k])
-                        ++count;
-                memset(is_set, 0, A.m*sizeof(char));
-                C.Rst[i+1] = count;
+    int count = 0;
+    char *is_set = new char[A.m]();
+    for (size_t i = 0; i < A.m; ++i) {
+        for (int k = A.Rst[i]; k < A.Rst[i+1]; ++k)
+            for (int j = B.Rst[A.Col[k]]; j < B.Rst[A.Col[k] + 1]; ++j)
+                is_set[B.Col[j]] = 1;
+        for (int k = 0; k < A.m; ++k)
+            if (is_set[k])
+                ++count;
+        C.Rst[i+1] = count;
+        memset(is_set, 0, A.m*sizeof(char));
+    }
+    C.Col = new int[C.Rst[C.m]];
+    C.Val = new T[C.Rst[C.m]];
+
+    T *rowpr = new T[A.m]();
+    char *is_set2 = new char[A.m]();
+    for (size_t i = 0; i < A.m; ++i) {
+        int c_curr = C.Rst[i];
+        for (int k = A.Rst[i]; k < A.Rst[i+1]; ++k) {
+            for (int j = B.Rst[A.Col[k]]; j < B.Rst[A.Col[k] + 1]; ++j) {
+                is_set2[B.Col[j]] = 1;
+                rowpr[B.Col[j]] += A.Val[k] * B.Val[j];
             }
-            delete[] is_set;
         }
-    } else {
-        int count = 0;
+        for (int k = 0; k < A.m; ++k) {
+            if (is_set2[k]) {
+                C.Col[c_curr] = k;
+                C.Val[c_curr++] = rowpr[k];
+            }
+        }
+        memset(is_set2, 0, A.m*sizeof(char));
+        memset(rowpr, 0, A.m*sizeof(T));
+    }
+    delete[] rowpr;
+    delete[] is_set;
+    delete[] is_set2;
+
+    T *c_wgt_new = new T[M.nz]();
+    int *c_adj_new = new int[M.nz];
+    memcpy(c_adj_new, M.Col, M.nz*sizeof(int));
+    
+    for (size_t i = 0; i < A.m; ++i) {
+        int c_curr = C.Rst[i];
+        for (int j = M.Rst[i]; j < M.Rst[i+1]; ++j) {
+            while (c_curr < C.Rst[i+1] && C.Col[c_curr] < M.Col[j])
+                ++c_curr;
+            if (c_curr < C.Rst[i+1] && C.Col[c_curr] == M.Col[j])
+                c_wgt_new[j] = C.Val[c_curr++];
+        }
+    }
+
+    delete[] C.Val;
+    delete[] C.Col;
+    C.Val = c_wgt_new;
+    C.Col = c_adj_new;
+    memcpy(C.Rst, M.Rst, (M.m + 1)*sizeof(int));
+    C.nz = C.Rst[C.m];
+}
+
+// Naive parallel scalar
+template <typename T>
+void _mspgemm_naive_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                                 const sparseMtx<T> &M, sparseMtx<T> &C) {
+    std::cerr << "Scalar\n";
+    C.m = A.m;
+    C.Rst = new int[A.m + 1];
+    C.Rst[0] = 0;
+
+#pragma omp parallel
+    {
+        int count;
         char *is_set = new char[A.m]();
+#pragma omp for schedule(dynamic)
         for (size_t i = 0; i < A.m; ++i) {
+            count = 0;
             for (int k = A.Rst[i]; k < A.Rst[i+1]; ++k)
                 for (int j = B.Rst[A.Col[k]]; j < B.Rst[A.Col[k] + 1]; ++j)
                     is_set[B.Col[j]] = 1;
             for (int k = 0; k < A.m; ++k)
                 if (is_set[k])
                     ++count;
-            C.Rst[i+1] = count;
             memset(is_set, 0, A.m*sizeof(char));
+            C.Rst[i+1] = count;
         }
-        C.Col = new int[C.Rst[C.m]];
-        C.Val = new T[C.Rst[C.m]];
+        delete[] is_set;
     }
 
-    //  
-    if (isParallel == true) {
+    C.Col = new int[C.Rst[C.m]];
+    C.Val = new T[C.Rst[C.m]];
+
 #pragma omp parallel
-        {
-            T *rowpr = new T[A.m]();
-            char *is_set = new char[A.m]();
-#pragma omp for schedule(dynamic)
-            for (size_t i = 0; i < A.m; ++i) {
-                int c_curr = C.Rst[i];
-                for (int k = A.Rst[i]; k < A.Rst[i+1]; ++k) {
-                    for (int j = B.Rst[A.Col[k]]; j < B.Rst[A.Col[k] + 1]; ++j) {
-                        is_set[B.Col[j]] = 1;
-                        rowpr[B.Col[j]] += A.Val[k] * B.Val[j];
-                    }
-                }
-                for (int k = 0; k < A.m; ++k) {
-                    if (is_set[k]) {
-                        C.Col[c_curr] = k;
-                        C.Val[c_curr++] = rowpr[k];
-                    }
-                }
-                memset(is_set, 0, A.m*sizeof(char));
-                memset(rowpr, 0, A.m*sizeof(T));
-            }
-            delete[] rowpr;
-            delete[] is_set;
-        }
-    } else {
+    {
         T *rowpr = new T[A.m]();
         char *is_set = new char[A.m]();
+#pragma omp for schedule(dynamic)
         for (size_t i = 0; i < A.m; ++i) {
             int c_curr = C.Rst[i];
             for (int k = A.Rst[i]; k < A.Rst[i+1]; ++k) {
@@ -1270,32 +1389,18 @@ void mspgemm_naive(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B
         delete[] is_set;
     }
 
-    //  
     T *c_wgt_new = new T[M.nz]();
     int *c_adj_new = new int[M.nz];
     memcpy(c_adj_new, M.Col, M.nz*sizeof(int));
     
-    int c_curr;
-    if (isParallel == true) {
-#pragma omp parallel for private(c_curr) schedule(dynamic)
-        for (size_t i = 0; i < A.m; ++i) {
-            c_curr = C.Rst[i];
-            for (int j = M.Rst[i]; j < M.Rst[i+1]; ++j) {
-                while (c_curr < C.Rst[i+1] && C.Col[c_curr] < M.Col[j])
-                    ++c_curr;
-                if (c_curr < C.Rst[i+1] && C.Col[c_curr] == M.Col[j])
-                    c_wgt_new[j] = C.Val[c_curr++];
-            }
-        }
-    } else {
-        for (size_t i = 0; i < A.m; ++i) {
-            c_curr = C.Rst[i];
-            for (int j = M.Rst[i]; j < M.Rst[i+1]; ++j) {
-                while (c_curr < C.Rst[i+1] && C.Col[c_curr] < M.Col[j])
-                    ++c_curr;
-                if (c_curr < C.Rst[i+1] && C.Col[c_curr] == M.Col[j])
-                    c_wgt_new[j] = C.Val[c_curr++];
-            }
+#pragma omp parallel for schedule(dynamic)
+    for (size_t i = 0; i < A.m; ++i) {
+        int c_curr = C.Rst[i];
+        for (int j = M.Rst[i]; j < M.Rst[i+1]; ++j) {
+            while (c_curr < C.Rst[i+1] && C.Col[c_curr] < M.Col[j])
+                ++c_curr;
+            if (c_curr < C.Rst[i+1] && C.Col[c_curr] == M.Col[j])
+                c_wgt_new[j] = C.Val[c_curr++];
         }
     }
 
@@ -1305,7 +1410,34 @@ void mspgemm_naive(bool isParallel, const sparseMtx<T> &A, const sparseMtx<T> &B
     C.Col = c_adj_new;
     memcpy(C.Rst, M.Rst, (M.m + 1)*sizeof(int));
     C.nz = C.Rst[C.m];
+}
 
+// Naive parallel vectorized (generic)
+template <typename T>
+void _mspgemm_naive_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B,
+                                      const sparseMtx<T> &M, sparseMtx<T> &C) {
+    std::cerr << "Vectorization no spec\n";
+    _mspgemm_naive_parallel_scalar(A, B, M, C);
+}
+
+// Naive parallel vectorized specialization for int
+template <>
+inline void _mspgemm_naive_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B,
+                                      const sparseMtx<int> &M, sparseMtx<int> &C) {
+    std::cerr << "Vectorization spec int\n";
+    _mspgemm_naive_parallel_scalar(A, B, M, C);
+}
+
+// Naive dispatcher
+template <typename T>
+void mspgemm_naive(bool isParallel, bool isVectorization, const sparseMtx<T> &A, const sparseMtx<T> &B,
+                const sparseMtx<T> &M, sparseMtx<T> &C) {
+    if (!isParallel)
+        _mspgemm_naive_sequential(A, B, M, C);
+    else if (isVectorization)
+        _mspgemm_naive_parallel_vectorized(A, B, M, C);
+    else
+        _mspgemm_naive_parallel_scalar(A, B, M, C);
 }
 
 template <typename T>
