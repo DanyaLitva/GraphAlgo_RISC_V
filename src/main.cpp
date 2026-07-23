@@ -60,8 +60,15 @@ GraphInfo get_graph_info(int argc, const char *argv[]) {
 int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const char *argv[]) {
     string benchmarkAlgorithm(argv[4]),
            parOrSeq(argv[5]),
-           batchSizeStr;
+           vecOrScal(argv[6]);
     bool isParallel = (parOrSeq == "par");
+    bool useVectorization = (vecOrScal == "vec");
+
+    if (vecOrScal != "vec" && vecOrScal != "scal") {
+        cerr << "incorrect input, 6-th argument: must be 'vec' or 'scal'\n";
+        return -6;
+    }
+
     size_t batch_size;
     mspgemmAlgorithm<int> mxm_algorithm;
     sparseMtx<int> MxmResult, TestMtx = gr;
@@ -69,23 +76,23 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     stringstream alg_ss;
 
     if (benchmarkAlgorithm == "bc") {
-        if (argc < 7 || (batch_size = atoll(argv[6])) == 0) {
-            cerr << "incorrect input, 6-th argument: batch has to be positive integer\n";
-            return -6;
+        if (argc < 8 || (batch_size = atoll(argv[7])) == 0) {
+            cerr << "incorrect input, 7-th argument: batch has to be positive integer\n";
+            return -7;
         }
     }
     else {
-        string multiplicationAlgorithm(argv[6]);
+        string multiplicationAlgorithm(argv[7]);
         if (multiplicationAlgorithm == "naive")
             mxm_algorithm = mspgemm_naive<int>;
-        if (multiplicationAlgorithm == "msa")
+        else if (multiplicationAlgorithm == "msa")
             mxm_algorithm = mspgemm_msa<int>;
         else if (multiplicationAlgorithm == "mca")
             mxm_algorithm = mspgemm_mca<int>;
         else if (multiplicationAlgorithm == "heap")
             mxm_algorithm = mspgemm_heap<int>;
         else {
-            cerr << "incorrect input, 6-th argument: has to be 'naive', 'msa', 'mca' or 'heap')\n";
+            cerr << "incorrect input, 7-th argument: has to be 'naive', 'msa', 'mca' or 'heap'\n";
             return -7;
         }
     }
@@ -95,47 +102,43 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     if (parOrSeq == "par") {
         alg_ss << "Parallel,   " << omp_get_max_threads() << " threads\n";
-        // cerr << "PARALLEL " << omp_get_max_threads() << " THREADS\n";
     } else if (parOrSeq == "seq") {
         alg_ss << "Sequential\n";
-        // cerr << "SEQUENTIAL \n\n";
     } else {
         cerr << "incorrect input, 5-th argument: has to be 'par' or 'seq'\n";
         return -5;
     }
 
+    alg_ss << "Vectorization: " << (useVectorization ? "vec" : "scal") << '\n';
+
     if (benchmarkAlgorithm == "mxm") {
         start = chrono::high_resolution_clock::now();
-        mxm_algorithm(isParallel, TestMtx, TestMtx, TestMtx, MxmResult);
+        mxm_algorithm(isParallel, useVectorization, TestMtx, TestMtx, TestMtx, MxmResult);
         finish = chrono::high_resolution_clock::now();
         alg_ss << "Algorithm:  matrix square\n";
     }
     else if (benchmarkAlgorithm == "k-truss") {
-        if (argc < 8 || atoi(argv[7]) < 3) {
-            cerr << "incorrect input, 7-th argument: has to be positive integer bigger than 2\n";
+        if (argc < 9 || atoi(argv[8]) < 3) {
+            cerr << "incorrect input, 8-th argument: has to be positive integer bigger than 2\n";
         }
-        alg_ss << "Algorithm:  k-truss, k = " << argv[7] << '\n';
-        k_truss(TestMtx, stoi(argv[7]), mxm_algorithm, isParallel);
+        alg_ss << "Algorithm:  k-truss, k = " << argv[8] << '\n';
+        k_truss(TestMtx, stoi(argv[8]), mxm_algorithm, isParallel, useVectorization);
     }
     else if (benchmarkAlgorithm == "triangle") {
         alg_ss << "Algorithm:  triangle counting\n";
-        triangle_counting(TestMtx, mxm_algorithm, isParallel);
+        triangle_counting(TestMtx, mxm_algorithm, isParallel, useVectorization);
     }
     else if (benchmarkAlgorithm == "bc") {
         vector<float> bcVector;
-        // size_t cache_fit_size = 1747626; // to size of float matrix to fit into 20 Mb cache 
-        // size_t batch_size = (cache_fit_size/Adj.m > 0) ? cache_fit_size/Adj.m : 3;
         start = chrono::high_resolution_clock::now();
-        bcVector = brandes_batch(isParallel, TestMtx, batch_size);
+        bcVector = brandes_batch(isParallel, useVectorization, TestMtx, batch_size);
         finish = chrono::high_resolution_clock::now();
-        // bcVector = betweenness_centrality(isParallel, TestMtx, 5);
         float sum = 0.0f;
         for (size_t i = 0; i < bcVector.size(); ++i)
             sum += bcVector[i];
         for (size_t i = 0; i < bcVector.size(); ++i)
             cout << bcVector[i] << '\n';
         
-        // cout << '\n';
         alg_ss << "Algorithm:  betweenness centrality\n" << "Batch size: " << batch_size << '\n';
         alg_ss << "Checksum:   " << sum << '\n';
     }
@@ -228,6 +231,12 @@ int read_graph_and_launch_test(const GraphInfo &info, int argc, const char *argv
 int main(int argc, const char* argv[]) {
     if (argc < 4) {
         cerr << "not enough arguments (have to be at least 3)\n";
+        return -1;
+    }
+
+    string action(argv[3]);
+    if (action == "launch" && argc < 7) {
+        cerr << "launch mode requires at least 7 arguments\n";
         return -1;
     }
 

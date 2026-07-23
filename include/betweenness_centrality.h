@@ -18,4 +18,4 @@ void bc_forward_step(const spMtx<int> &AT,
                      long long &init_numsp_time,
                      long long &symbolic_time,
                      long long &numeric_time);
-std::vector<float> betweenness_centrality_batch(bool isParallel, const spMtx<int> &A, size_t batchSize);
+std::vector<float> betweenness_centrality_batch(bool isParallel, bool isVectorization, const spMtx<int> &A, size_t batchSize);

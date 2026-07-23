@@ -280,7 +280,7 @@ void bc_forward_step(const spMtx<int> &AT,
     std::swap(Front, FrontTmp);
 }
 
-std::vector<float> betweenness_centrality_batch(bool isParallel, const spMtx<int> &A, size_t batchSize) {
+std::vector<float> betweenness_centrality_batch(bool isParallel, bool isVectorization, const spMtx<int> &A, size_t batchSize) {
     if (A.m != A.n)
         throw "non-square matrix; BC is only for square matrices";
     
