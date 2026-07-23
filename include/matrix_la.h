@@ -761,8 +761,13 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
 // MCA parallel vectorized specialization for int
 template<typename U>
 inline void _mspgemm_mca_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+#ifdef USE_RVV
     std::cerr << "Vectorization spec int\n";
     _mspgemm_mca_parallel_scalar(A, B, M, C);
+#else
+  std::cerr << "No RVV build\n";
+  _mspgemm_mca_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // MCA dispatchers
@@ -880,8 +885,13 @@ void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
 // MSA parallel vectorized specialization for int
 template<typename U>
 inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+#ifdef USE_RVV
     std::cerr << "Vectorization spec int\n";
     _mspgemm_msa_parallel_scalar(A, B, M, C);
+#else
+  std::cerr << "No RVV build\n";
+  _mspgemm_mca_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // MSA dispatcher
@@ -1087,8 +1097,13 @@ void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<T> &A, const sparseM
 // MSA cmask parallel vectorized specialization for int
 template<typename U>
 inline void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+#ifdef USE_RVV
     std::cerr << "Vectorization spec int\n";
     _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
+#else
+  std::cerr << "No RVV build\n";
+  _mspgemm_mca_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // MSA cmask dispatcher
@@ -1227,8 +1242,13 @@ void _mspgemm_heap_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T>
 template<>
 inline void _mspgemm_heap_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B,
                                      const sparseMtx<int> &M, sparseMtx<int> &C) {
+#ifdef USE_RVV
     std::cerr << "Vectorization spec int\n";
     _mspgemm_heap_parallel_scalar(A, B, M, C);
+#else
+  std::cerr << "No RVV build\n";
+  _mspgemm_mca_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // Heap dispatchers
@@ -1424,8 +1444,13 @@ void _mspgemm_naive_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T
 template <>
 inline void _mspgemm_naive_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B,
                                       const sparseMtx<int> &M, sparseMtx<int> &C) {
+#ifdef USE_RVV
     std::cerr << "Vectorization spec int\n";
     _mspgemm_naive_parallel_scalar(A, B, M, C);
+#else
+  std::cerr << "No RVV build\n";
+  _mspgemm_mca_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // Naive dispatcher
