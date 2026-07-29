@@ -1325,11 +1325,11 @@ void _mspgemm_naive_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
                             const sparseMtx<T> &M, sparseMtx<T> &C) {
     // ќќќќќќќќќќќќќ C
     C.m = A.m;
-    if (!C.Col)
+    if (C.Col)
         delete[] C.Col;
-    if (!C.Val)
+    if (C.Val)
         delete[] C.Val;
-    if (!C.Rst)
+    if (C.Rst)
         delete[] C.Rst;
     C.Rst = new int[A.m + 1];
     C.Rst[0] = 0;
@@ -1404,11 +1404,11 @@ void _mspgemm_naive_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B
     std::cerr << "Scalar\n";
     // ќќќќќќќќќќќќќ C
     C.m = A.m;
-    if (!C.Col)
+    if (C.Col)
         delete[] C.Col;
-    if (!C.Val)
+    if (C.Val)
         delete[] C.Val;
-    if (!C.Rst)
+    if (C.Rst)
         delete[] C.Rst;
     C.Rst = new int[A.m + 1];
     C.Rst[0] = 0;
