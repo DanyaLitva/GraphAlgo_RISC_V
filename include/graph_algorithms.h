@@ -121,6 +121,6 @@ void check_correctness_float_mult(const sparseMtx<FloatType>& A, size_t mask_den
     }
   }
 
-  std::cout << "SUCCESS! Results match perfectly.\n";
+  std::cout << "Succes!\n";
   std::cout << "Max difference: " << max_diff << " (tolerance=" << tol << ")\n";
 }
