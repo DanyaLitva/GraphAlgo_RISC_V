@@ -48,10 +48,11 @@ int launch_float_test(const sparseMtx<FloatType>& gr, const GraphInfo& info, int
   size_t mask_density = stoull(argv[7]);
 
   bool isParallel = (parOrSeq == "par");
+  bool checkCorrectness = (vecOrScal == "correct");
   bool useVectorization = (vecOrScal == "vec");
 
-  if (vecOrScal != "vec" && vecOrScal != "scal") {
-    cerr << "incorrect input, 5-th argument: must be 'vec' or 'scal'\n";
+  if (vecOrScal != "vec" && vecOrScal != "scal" && vecOrScal != "correct") {
+    cerr << "incorrect input, 5-th argument: must be 'vec', 'scal' or 'correct'\n";
     return -6;
   }
   if (parOrSeq != "par" && parOrSeq != "seq") {
@@ -81,9 +82,16 @@ int launch_float_test(const sparseMtx<FloatType>& gr, const GraphInfo& info, int
   cout << "Density:    " << mask_density << '\n';
   cout << "Algorithm:  " << multiplicationAlgorithm << '\n';
   cout << "Parallel:   " << (isParallel ? "yes" : "no") << '\n';
-  cout << "Vectorized: " << (useVectorization ? "yes" : "no") << '\n';
+  cout << "Mode:       " << vecOrScal << '\n';
 
-  floating_mask_mult<FloatType>(gr, mask_density, mxm_algorithm, isParallel, useVectorization);
+  if (checkCorrectness) {
+    // Запуск режима сверки правильности
+    check_correctness_float_mult<FloatType>(gr, mask_density, mxm_algorithm, isParallel);
+  }
+  else {
+    // Обычный бенчмарк (только vec или только scal)
+    floating_mask_mult<FloatType>(gr, mask_density, mxm_algorithm, isParallel, useVectorization);
+  }
 
   return 0;
 }
@@ -97,7 +105,7 @@ int read_graph_and_launch_test(const GraphInfo& info, int argc, const char* argv
 
 int main(int argc, const char* argv[]) {
   if (argc < 8) {
-    cerr << "Usage: " << argv[0] << " <graph_path> <log_path> <float|double> <par|seq> <vec|scal> <naive|msa|mca|heap> <mask_density>\n";
+    cerr << "Usage: " << argv[0] << " <graph_path> <log_path> <float|double> <par|seq> <vec|scal|correct> <naive|msa|mca|heap> <mask_density>\n";
     return -1;
   }
 
