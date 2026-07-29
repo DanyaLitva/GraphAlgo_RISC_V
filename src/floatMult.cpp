@@ -12,6 +12,7 @@
 #include <string>
 
 // ./build/floatMult ./graphs/netherlands_osm.mtx log.txt double par vec mca 10000
+// ./build/floatMult ./graphs/netherlands_osm.mtx log.txt double par correct mca 10000
 using namespace std;
 
 struct GraphInfo {
@@ -85,11 +86,9 @@ int launch_float_test(const sparseMtx<FloatType>& gr, const GraphInfo& info, int
   cout << "Mode:       " << vecOrScal << '\n';
 
   if (checkCorrectness) {
-    // Запуск режима сверки правильности
     check_correctness_float_mult<FloatType>(gr, mask_density, mxm_algorithm, isParallel);
   }
   else {
-    // Обычный бенчмарк (только vec или только scal)
     floating_mask_mult<FloatType>(gr, mask_density, mxm_algorithm, isParallel, useVectorization);
   }
 
