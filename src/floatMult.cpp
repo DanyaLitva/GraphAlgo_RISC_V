@@ -11,6 +11,7 @@
 #include <iostream>
 #include <string>
 
+// ./build/floatMult ./graphs/netherlands_osm.mtx log.txt double par vec mca 10000
 using namespace std;
 
 struct GraphInfo {
