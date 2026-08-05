@@ -907,9 +907,10 @@ void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
         int m_max = M.Rst[i+1];
 
         // ��������� ���������� ��������� ������������
-        for (int j = m_min; j < m_max; ++j)
+        for (int j = m_min; j < m_max; ++j) {
             accum.state[M.Col[j]] = MSA<T>::ALLOWED;
             accum.value[M.Col[j]] = T(0);
+        }
 
         // ������� i-� ������ ������� C
         for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
