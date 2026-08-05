@@ -909,6 +909,7 @@ void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
         // ��������� ���������� ��������� ������������
         for (int j = m_min; j < m_max; ++j)
             accum.state[M.Col[j]] = MSA<T>::ALLOWED;
+            accum.value[M.Col[j]] = T(0);
 
         // ������� i-� ������ ������� C
         for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
@@ -976,15 +977,14 @@ void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
     _mspgemm_msa_parallel_scalar(A, B, M, C);
 }
 
-// MSA parallel vectorized specialization for int
+// MSA parallel vectorized specialization for double
 template<typename U>
-inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<double> &A, const sparseMtx<double> &B, const sparseMtx<U> &M, sparseMtx<double> &C) {
 #ifdef USE_RVV
     //std::cerr << "Vectorization spec int\n";
 #else
-    //std::cerr << "No RVV build\n";
-#endif
     _mspgemm_msa_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // MSA dispatcher
