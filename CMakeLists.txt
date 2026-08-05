@@ -17,6 +17,7 @@ add_library(grAlgoLib STATIC
     include/mmio.h
     src/mmio.cpp
     src/graph_algorithms.cpp
+    src/floatMult.cpp
 )
 
 target_include_directories(grAlgoLib PUBLIC include)
@@ -31,7 +32,12 @@ add_executable(grAlgo
     src/main.cpp
 )
 
+add_executable(floatMult
+    src/floatMult.cpp
+)
+
 target_link_libraries(grAlgo PRIVATE grAlgoLib)
+target_link_libraries(floatMult PRIVATE grAlgoLib)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")

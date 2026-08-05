@@ -727,7 +727,7 @@ void _mspgemm_mca_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
 // MCA parallel scalar
 template<typename T, typename U>
 void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    std::cerr << "Scalar\n";
+    //std::cerr << "Scalar\n";
     int mca_len = 0;
     for (size_t i = 0; i < A.m; ++i)
         if (M.Rst[i+1] - M.Rst[i] > mca_len)
@@ -765,19 +765,103 @@ void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, 
 // MCA parallel vectorized (generic)
 template<typename T, typename U>
 void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    std::cerr << "Vectorization no spec\n";
+    //std::cerr << "Vectorization no spec\n";
     _mspgemm_mca_parallel_scalar(A, B, M, C);
 }
 
-// MCA parallel vectorized specialization for int
+// MCA parallel vectorized specialization for double
 template<typename U>
-inline void _mspgemm_mca_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+inline void _mspgemm_mca_parallel_vectorized(const sparseMtx<double> &A, const sparseMtx<double> &B, const sparseMtx<U> &M, sparseMtx<double> &C) {
 #ifdef USE_RVV
-    std::cerr << "Vectorization spec int\n";
+    //std::cerr << "Vectorization spec double\n"; 
+
+    int mca_len = 0; 
+    for (size_t i = 0; i < A.m; ++i) { 
+        if (M.Rst[i+1] - M.Rst[i] > mca_len) { 
+            mca_len = M.Rst[i+1] - M.Rst[i]; 
+        }
+    }
+
+#pragma omp parallel
+    {
+        MCA<double> accum(mca_len); 
+
+#pragma omp for schedule(dynamic)
+        for (size_t i = 0; i < A.m; ++i) { 
+            int m_row_len = M.Rst[i+1] - M.Rst[i]; 
+            double* accum_ptr = accum.values; 
+            
+            for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) { 
+                int k = A.Col[t]; 
+                int b_pos = B.Rst[k]; 
+                int b_max = B.Rst[k+1]; 
+                double a_val = A.Val[t]; 
+                
+                int m_pos = M.Rst[i]; 
+                int m_max = M.Rst[i] + m_row_len; 
+
+                
+                while (b_pos < b_max && m_pos < m_max) {
+                    int current_b_col = B.Col[b_pos]; 
+                    
+                    //m1 version
+                    /*
+                    size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
+                    
+                    vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
+                    
+                    vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, current_b_col, vl);
+                    
+                    long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+                    */
+
+                    //m4 version
+                    // Запрашиваем длину вектора
+                    size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
+
+                    // Загружаем вектор индексов
+                    vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
+
+                    // Сравниваем
+                    vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, current_b_col, vl);
+
+                    // Ищем индекс первого совпадения
+                    long match_idx = __riscv_vfirst_m_b8(v_match, vl);
+                    
+                    if (match_idx >= 0) {
+                        // Вычисляем абсолютное смещение j в accum_ptr
+                        int j = (m_pos - M.Rst[i]) + match_idx;
+                        accum_ptr[j] += a_val * B.Val[b_pos]; 
+                        
+                        b_pos++;
+                        // Поскольку M.Col строго возрастает, можем перепрыгнуть пройденное
+                        m_pos += match_idx + 1; 
+                    } else {
+                        // Совпадений в текущем векторе M нет.
+                        // Проверяем последний загруженный элемент вектора M, чтобы понять, 
+                        // кто "отстает" и кого нужно двигать дальше.
+                        int last_m_col = M.Col[m_pos + vl - 1];
+                        
+                        if (current_b_col > last_m_col) {
+                            // current_b_col больше всех элементов в векторе, шагаем M вперед на весь вектор (vl)
+                            m_pos += vl;
+                        } else {
+                            // current_b_col меньше последнего элемента M, значит его вообще нет в этом блоке M. Шагаем B.
+                            b_pos++;
+                        }
+                    }
+                }
+
+            }
+
+            memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(double)); 
+            memset(accum.values, 0, mca_len * sizeof(double)); 
+        }
+    }
 #else
-    std::cerr << "No RVV build\n";
+    //std::cerr << "No RVV build\n"; 
+    _mspgemm_mca_parallel_scalar(A, B, M, C); 
 #endif
-    _mspgemm_mca_parallel_scalar(A, B, M, C);
 }
 
 // MCA dispatchers
@@ -854,7 +938,7 @@ void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
 // MSA parallel scalar
 template<typename T, typename U>
 void _mspgemm_msa_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    std::cerr << "Scalar\n";
+    //std::cerr << "Scalar\n";
 #pragma omp parallel
     {
         MSA<T> accum(B.n);
@@ -888,7 +972,7 @@ void _mspgemm_msa_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, 
 // MSA parallel vectorized (generic)
 template<typename T, typename U>
 void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    std::cerr << "Vectorization no spec\n";
+    //std::cerr << "Vectorization no spec\n";
     _mspgemm_msa_parallel_scalar(A, B, M, C);
 }
 
@@ -896,9 +980,9 @@ void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
 template<typename U>
 inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
 #ifdef USE_RVV
-    std::cerr << "Vectorization spec int\n";
+    //std::cerr << "Vectorization spec int\n";
 #else
-    std::cerr << "No RVV build\n";
+    //std::cerr << "No RVV build\n";
 #endif
     _mspgemm_msa_parallel_scalar(A, B, M, C);
 }
@@ -1007,7 +1091,7 @@ void _mspgemm_msa_cmask_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
 // MSA cmask parallel scalar
 template<typename T, typename U>
 void _mspgemm_msa_cmask_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    std::cerr << "Scalar\n";
+    //std::cerr << "Scalar\n";
 #pragma omp parallel
     {
         MSA<T> accum(B.n);
@@ -1117,7 +1201,7 @@ void _mspgemm_msa_cmask_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T
 // MSA cmask parallel vectorized (generic)
 template<typename T, typename U>
 void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    std::cerr << "Vectorization no spec\n";
+    //std::cerr << "Vectorization no spec\n";
     _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
 }
 
@@ -1125,9 +1209,9 @@ void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<T> &A, const sparseM
 template<typename U>
 inline void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
 #ifdef USE_RVV
-    std::cerr << "Vectorization spec int\n";
+    //std::cerr << "Vectorization spec int\n";
 #else
-    std::cerr << "No RVV build\n";
+    //std::cerr << "No RVV build\n";
 #endif
     _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
 }
@@ -1220,7 +1304,7 @@ void _mspgemm_heap_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
 template<typename T>
 void _mspgemm_heap_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B,
                                 const sparseMtx<T> &M, sparseMtx<T> &C) {
-    std::cerr << "Scalar\n";
+    //std::cerr << "Scalar\n";
 #pragma omp parallel
     {
         int m_pos;      // ќќќќќќќ ќќќќќќќ ќ ќќќќќ ќ
@@ -1270,7 +1354,7 @@ void _mspgemm_heap_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B,
 template<typename T>
 void _mspgemm_heap_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B,
                                      const sparseMtx<T> &M, sparseMtx<T> &C) {
-    std::cerr << "Vectorization no spec\n";
+    //std::cerr << "Vectorization no spec\n";
     _mspgemm_heap_parallel_scalar(A, B, M, C);
 }
 
@@ -1279,9 +1363,9 @@ template<>
 inline void _mspgemm_heap_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B,
                                      const sparseMtx<int> &M, sparseMtx<int> &C) {
 #ifdef USE_RVV
-    std::cerr << "Vectorization spec int\n";
+    //std::cerr << "Vectorization spec int\n";
 #else
-    std::cerr << "No RVV build\n";
+    //std::cerr << "No RVV build\n";
 #endif
     _mspgemm_heap_parallel_scalar(A, B, M, C);
 }
@@ -1325,11 +1409,11 @@ void _mspgemm_naive_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
                             const sparseMtx<T> &M, sparseMtx<T> &C) {
     // ќќќќќќќќќќќќќ C
     C.m = A.m;
-    if (!C.Col)
+    if (C.Col)
         delete[] C.Col;
-    if (!C.Val)
+    if (C.Val)
         delete[] C.Val;
-    if (!C.Rst)
+    if (C.Rst)
         delete[] C.Rst;
     C.Rst = new int[A.m + 1];
     C.Rst[0] = 0;
@@ -1401,14 +1485,14 @@ void _mspgemm_naive_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B,
 template <typename T>
 void _mspgemm_naive_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B,
                                  const sparseMtx<T> &M, sparseMtx<T> &C) {
-    std::cerr << "Scalar\n";
+    //std::cerr << "Scalar\n";
     // ќќќќќќќќќќќќќ C
     C.m = A.m;
-    if (!C.Col)
+    if (C.Col)
         delete[] C.Col;
-    if (!C.Val)
+    if (C.Val)
         delete[] C.Val;
-    if (!C.Rst)
+    if (C.Rst)
         delete[] C.Rst;
     C.Rst = new int[A.m + 1];
     C.Rst[0] = 0;
@@ -1491,7 +1575,7 @@ void _mspgemm_naive_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B
 template <typename T>
 void _mspgemm_naive_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B,
                                       const sparseMtx<T> &M, sparseMtx<T> &C) {
-    std::cerr << "Vectorization no spec\n";
+    //std::cerr << "Vectorization no spec\n";
     _mspgemm_naive_parallel_scalar(A, B, M, C);
 }
 
@@ -1500,9 +1584,9 @@ template <>
 inline void _mspgemm_naive_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B,
                                       const sparseMtx<int> &M, sparseMtx<int> &C) {
 #ifdef USE_RVV
-    std::cerr << "Vectorization spec int\n";
+    //std::cerr << "Vectorization spec int\n";
 #else
-    std::cerr << "No RVV build\n";
+    //std::cerr << "No RVV build\n";
 #endif
     _mspgemm_naive_parallel_scalar(A, B, M, C);
 }
