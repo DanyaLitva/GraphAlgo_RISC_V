@@ -982,7 +982,47 @@ void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
 template<typename U>
 inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<double> &A, const sparseMtx<double> &B, const sparseMtx<U> &M, sparseMtx<double> &C) {
 #ifdef USE_RVV
-    //std::cerr << "Vectorization spec int\n";
+#pragma omp parallel
+    {
+        MSA<double> accum(B.n);
+
+#pragma omp for schedule(dynamic, 32)
+        for (size_t i = 0; i < A.m; ++i) {
+            int m_min = M.Rst[i];
+            int m_max = M.Rst[i + 1];
+
+            int j_init = m_min;
+            int remain_init = m_max - m_min;
+            while (remain_init > 0) {
+                size_t vl = __riscv_vsetvl_e64m2(remain_init);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 3, vl);
+
+                vfloat64m2_t v_zero = __riscv_vfmv_v_f_f64m2(0.0, vl);
+
+                __riscv_vsuxei32_v_f64m2(accum.value, v_byte_offsets, v_zero, vl);
+
+                j_init += vl;
+                remain_init -= vl;
+            }
+
+            for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
+                int k = A.Col[t];
+                int b_pos = B.Rst[k];
+                int b_max = B.Rst[k + 1];
+                double   a_val = A.Val[t];
+
+                for (int j = b_pos; j < b_max; ++j)
+                    accum.value[B.Col[j]] += a_val * B.Val[j];
+            }
+
+            for (int j = m_min; j < m_max; ++j) {
+                C.Val[j] = accum.value[M.Col[j]];
+            }
+        }
+    }
 #else
     _mspgemm_msa_parallel_scalar(A, B, M, C);
 #endif
