@@ -1086,7 +1086,7 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<float>& A, const sp
 
                 vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
 
-                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 3, vl);
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
 
                 vfloat32m1_t v_zero = __riscv_vfmv_v_f_f32m1(0.0, vl);
 
@@ -1111,7 +1111,7 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<float>& A, const sp
 
                     vuint32m1_t vb_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
 
-                    vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 3, vl);
+                    vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 2, vl);
 
                     vfloat32m1_t vb_val = __riscv_vle32_v_f32m1(&B.Val[j_calc], vl);
 
@@ -1135,7 +1135,7 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<float>& A, const sp
 
                 vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
 
-                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 3, vl);
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
 
                 vfloat32m1_t v_acc_res = __riscv_vluxei32_v_f32m1(accum.value, v_byte_offsets, vl);
 
