@@ -1038,9 +1038,25 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<double> &A, const s
                     //accum.value[B.Col[j]] += a_val * B.Val[j];
             }
 
-            for (int j = m_min; j < m_max; ++j) {
-                C.Val[j] = accum.value[M.Col[j]];
+            int j_store = m_min;
+            int remain_store = m_max - m_min;
+            while (remain_store > 0) {
+                size_t vl = __riscv_vsetvl_e64m2(remain_store);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 3, vl);
+
+                vfloat64m2_t v_acc_res = __riscv_vluxei32_v_f64m2(accum.value, v_byte_offsets, vl);
+
+                __riscv_vse64_v_f64m2(&C.Val[j_store], v_acc_res, vl);
+
+                j_store += vl;
+                remain_store -= vl;
             }
+            //for (int j = m_min; j < m_max; ++j) {
+            //    C.Val[j] = accum.value[M.Col[j]];
+            //}
         }
     }
 #else
