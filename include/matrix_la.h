@@ -1014,8 +1014,28 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<double> &A, const s
                 int b_max = B.Rst[k + 1];
                 double   a_val = A.Val[t];
 
-                for (int j = b_pos; j < b_max; ++j)
-                    accum.value[B.Col[j]] += a_val * B.Val[j];
+                int j_calc = b_pos;
+                int remain_calc = b_max - b_pos;
+                while (remain_calc > 0) {
+                    size_t vl = __riscv_vsetvl_e64m2(remain_calc);
+
+                    vuint32m1_t vb_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
+
+                    vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 3, vl);
+
+                    vfloat64m2_t vb_val = __riscv_vle64_v_f64m2(&B.Val[j_calc], vl);
+
+                    vfloat64m2_t v_acc = __riscv_vluxei32_v_f64m2(accum.value, v_byte_offsets, vl);
+
+                    v_acc = __riscv_vfmacc_vf_f64m2(v_acc, a_val, vb_val, vl);
+
+                    __riscv_vsuxei32_v_f64m2(accum.value, v_byte_offsets, v_acc, vl);
+
+                    j_calc += vl;
+                    remain_calc -= vl;
+                }
+                //for (int j = b_pos; j < b_max; ++j)
+                    //accum.value[B.Col[j]] += a_val * B.Val[j];
             }
 
             for (int j = m_min; j < m_max; ++j) {
