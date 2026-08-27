@@ -1,7 +1,8 @@
 Инструкция для сборки:  
 > make - стандартная сборка  
-> make rvv - RISC-V сборка с LMUL=2  
-> make rvv LMUL=2 - RISC-V сборка с LMUL=1,2,4  
+> make rvv - RISC-V сборка с LMUL=2 (кросскомпиляция)
+> make rvv-native - RISC-V сборка с LMUL=2 на RISC-V узле
+> make rvv|rvv-native LMUL=1|2|4 - RISC-V сборка с LMUL=1,2,4  
 
 Инструкция для запуска:
 > // argv[1] - путь к матрице  
