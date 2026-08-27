@@ -26,7 +26,7 @@ rvv:
 rvv-f16:
 	$(MAKE) CMAKE_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../toolchains/riscv64-1p0-gcc-f16.toolchain.cmake -DWITH_RVV=ON -DLMUL=$(LMUL)"
 
-rvv-native:
+rvv-native: clean
 	$(MAKE) CMAKE_OPTIONS="-DWITH_RVV=ON -DLMUL=$(LMUL)"
 
 clean:
