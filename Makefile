@@ -1,5 +1,5 @@
 default: release
-LMUL:=2
+LMUL:=1
 BUILD_DIR := build
 k:=3
 
