@@ -1,5 +1,5 @@
 default: release
-LMUL:=1
+LMUL:=2
 BUILD_DIR := build
 k:=3
 
@@ -35,8 +35,23 @@ clean:
 
 rebuild: clean release
 
+GRAPHS := web-Stanford web-Google pwtk kron_g500-logn16 Stanford_Berkeley 
+SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm NACA0015
+
 test:
-	./build/rvv_test ./graphs/raefsky3.mtx log.txt $(k) && \
-	./build/rvv_test ./graphs/web-Stanford.mtx log.txt $(k) && \
-	./build/rvv_test ./graphs/netherlands_osm.mtx log.txt $(k) && \
-	./build/rvv_test ./graphs/web-Google.mtx log.txt $(k)
+	echo && echo && echo k_truss with k = $(k) on main graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
+	for g in $(GRAPHS); do \
+		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
+	done
+
+small_test:
+	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
+	for g in $(SMALL_GRAPHS); do \
+		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
+	done
+
+to_bin:
+	for g in $(GRAPHS); do \
+		./build/grAlgo ./graphs/$$g.mtx log.txt to_bin; \
+	done
+

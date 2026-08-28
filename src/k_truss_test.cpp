@@ -12,8 +12,8 @@
 #define COUNT_REPEAT 10
 using namespace std;
 
-// ./build/rvv_test ./graphs/netherlands_osm.mtx log.txt 5
-// srun -p k3 -t 100 ./build/rvv_test ./graphs/web-Google.mtx log.txt 5
+// ./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 5
+// srun -p k3 -t 100 ./build/k_truss_test ./graphs/web-Google.mtx log.txt 5
 struct GraphInfo {
     std::string graphName;
     std::string graphPath;
@@ -72,10 +72,10 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     long long min_time;
     int arg_k = stoi(argv[3]);
 
-    cout << "Graph name: " << info.graphName << '\n';
+    cout << info.graphName << ",";
     //cout << "Vertices:   " << TestMtx.m << '\n';
     //cout << "Edges:      " << TestMtx.nz << '\n';
-    cout << "MCA k-truss test, k = " << arg_k<< ":\n";
+    // cout << "MCA k-truss test, k = " << arg_k<< ":\n";
     
 
     min_time = LLONG_MAX;
@@ -86,7 +86,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
       if(time<min_time) min_time = time;
     }    
     
-    cout << "rvv LMUL=1 time:       " << min_time << " ms\n";
+    cout <<  min_time << ",";
 
 
     min_time = LLONG_MAX;
@@ -97,7 +97,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
       if(time<min_time) min_time = time;
     }    
     
-    cout << "rvv LMUL=2 time:       " << min_time << " ms\n";
+    cout << min_time << ",";
 
 
 
@@ -109,7 +109,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
       if(time<min_time) min_time = time;
     }    
     
-    cout << "rvv LMUL=4 time:       " << min_time << " ms\n";
+    cout <<  min_time << ",";
 
 
     min_time = LLONG_MAX;
@@ -119,7 +119,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
       if(time<min_time) min_time = time;
     }    
     
-    cout << "scalar MCA time:       " << min_time << " ms\n";
+    cout <<  min_time << ",";
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
@@ -128,7 +128,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
       if(time<min_time) min_time = time;
     }    
     
-    cout << "scalar MSA time:       " << min_time << " ms\n";
+    cout << min_time << endl;
 
 
     return 0;
