@@ -9,7 +9,7 @@
 #include <sstream>
 #include <functional>
 #include <climits>
-#define COUNT_REPEAT 2
+#define COUNT_REPEAT 8
 using namespace std;
 
 // ./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 5
