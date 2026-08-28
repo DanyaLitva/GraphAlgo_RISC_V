@@ -35,23 +35,30 @@ clean:
 
 rebuild: clean release
 
-GRAPHS := web-Stanford web-Google pwtk kron_g500-logn16 Stanford_Berkeley 
-SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm NACA0015
+GRAPHS := web-Stanford web-Google pwtk
+SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm
+ALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk ASIC_680k NACA0015 kron_g500-logn16 Stanford_Berkeley
 
-test:
+k_truss_test:
 	echo && echo && echo k_truss with k = $(k) on main graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
 	for g in $(GRAPHS); do \
 		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
 	done
 
-small_test:
+k_truss_small_test:
 	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
 	for g in $(SMALL_GRAPHS); do \
 		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
 	done
 
+triangle_test:
+	echo && echo && echo triangle test on main graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
+	for g in $(ALL_GRAPHS); do \
+		./build/triangle_test ./graphs/$$g.bin log.txt $(k); \
+	done
+
 to_bin:
-	for g in $(GRAPHS); do \
+	for g in $(ALL_GRAPHS); do \
 		./build/grAlgo ./graphs/$$g.mtx log.txt to_bin; \
 	done
 

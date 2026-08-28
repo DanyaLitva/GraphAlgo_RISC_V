@@ -54,9 +54,14 @@ add_executable(k_truss_test
     src/k_truss_test.cpp
 )
 
+add_executable(triangle_test
+    src/triangle_test.cpp
+)
+
 target_link_libraries(grAlgo PRIVATE grAlgoLib)
 target_link_libraries(floatMult PRIVATE grAlgoLib)
 target_link_libraries(k_truss_test PRIVATE grAlgoLib)
+target_link_libraries(triangle_test PRIVATE grAlgoLib)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")

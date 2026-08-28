@@ -509,3 +509,24 @@ sparseMtx<int> k_truss_test(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int
     delete[] tmp_Rst;
     return C;
 }
+
+int64_t triangle_counting_test(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization) {
+    int64_t num_of_tr = 0;
+    sparseMtx<int> L = extract_lower_triangle(A);
+    sparseMtx<int> C;
+
+    start_test = chrono::steady_clock::now();
+
+    /* TRIANGLE COUNTING ITSELF */
+    matrixMult(isParallel, isVectorization, L, L, L, C);
+#pragma omp parallel for reduction(+:num_of_tr)
+    for (int j = 0; j < C.Rst[C.m]; ++j)
+        num_of_tr += C.Val[j];
+    /* TRIANGLE COUNTING ITSELF */
+
+    finish_test = chrono::steady_clock::now();
+    //cout << "Time:       " << chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count() << " ms\n";
+    //cout << "Triangles:  " << num_of_tr << '\n';
+
+    return num_of_tr;
+}
