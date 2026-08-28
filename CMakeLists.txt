@@ -50,8 +50,13 @@ add_executable(floatMult
     src/floatMult.cpp
 )
 
+add_executable(rvv_test
+    src/rvv_test.cpp
+)
+
 target_link_libraries(grAlgo PRIVATE grAlgoLib)
 target_link_libraries(floatMult PRIVATE grAlgoLib)
+target_link_libraries(rvv_test PRIVATE grAlgoLib)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")
