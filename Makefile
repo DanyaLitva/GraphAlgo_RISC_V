@@ -1,6 +1,7 @@
 default: release
 LMUL:=2
 BUILD_DIR := build
+k:=3
 
 release:
 	mkdir -p $(BUILD_DIR) && \
@@ -33,3 +34,9 @@ clean:
 	rm -rf $(BUILD_DIR)
 
 rebuild: clean release
+
+test:
+	./build/rvv_test ./graphs/raefsky3.mtx log.txt $(k) && \
+	./build/rvv_test ./graphs/web-Stanford.mtx log.txt $(k) && \
+	./build/rvv_test ./graphs/netherlands_osm.mtx log.txt $(k) && \
+	./build/rvv_test ./graphs/web-Google.mtx log.txt $(k)
