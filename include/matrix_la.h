@@ -720,7 +720,7 @@ void _mspgemm_mca_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
         // ќќќќќќќќќќ i-ќ ќќќќќќ ќќќќќќќ C
         memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
         // ќќќќќќќ ќќќќќќќќќќќќ ќќќ ќќќќќќќќќ ќќќќќќќќ
-        memset(accum.values, 0, mca_len * sizeof(T));
+        memset(accum.values, 0, m_row_len * sizeof(T));
     }
 }
 
@@ -737,7 +737,7 @@ void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, 
     {
         MCA<T> accum(mca_len);
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
         for (size_t i = 0; i < A.m; ++i) {
             int m_row_len = M.Rst[i+1] - M.Rst[i];
             int m_pos;
@@ -774,7 +774,7 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
 #pragma omp parallel
   {
     MCA<T> accum(mca_len);
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
     for (size_t i = 0; i < A.m; ++i) {
       int m_row_len = M.Rst[i + 1] - M.Rst[i];
       T* accum_ptr = accum.values;
@@ -827,7 +827,7 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
       }
 
       memcpy(C.Val + C.Rst[i], accum.values, m_row_len * sizeof(T));
-      memset(accum.values, 0, mca_len * sizeof(T));
+      memset(accum.values, 0, m_row_len * sizeof(T));
     }
   }
 #else
@@ -1606,7 +1606,7 @@ void _mspgemm_mca_parallel_vectorized_m1(const sparseMtx<T> &A, const sparseMtx<
 #pragma omp parallel
   {
     MCA<T> accum(mca_len);
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
     for (size_t i = 0; i < A.m; ++i) {
       int m_row_len = M.Rst[i + 1] - M.Rst[i];
       T* accum_ptr = accum.values;
@@ -1645,7 +1645,7 @@ void _mspgemm_mca_parallel_vectorized_m1(const sparseMtx<T> &A, const sparseMtx<
       }
 
       memcpy(C.Val + C.Rst[i], accum.values, m_row_len * sizeof(T));
-      memset(accum.values, 0, mca_len * sizeof(T));
+      memset(accum.values, 0, m_row_len * sizeof(T));
     }
   }
 #else
@@ -1666,7 +1666,7 @@ void _mspgemm_mca_parallel_vectorized_m2(const sparseMtx<T> &A, const sparseMtx<
 #pragma omp parallel
   {
     MCA<T> accum(mca_len);
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
     for (size_t i = 0; i < A.m; ++i) {
       int m_row_len = M.Rst[i + 1] - M.Rst[i];
       T* accum_ptr = accum.values;
@@ -1705,7 +1705,7 @@ void _mspgemm_mca_parallel_vectorized_m2(const sparseMtx<T> &A, const sparseMtx<
       }
 
       memcpy(C.Val + C.Rst[i], accum.values, m_row_len * sizeof(T));
-      memset(accum.values, 0, mca_len * sizeof(T));
+      memset(accum.values, 0, m_row_len * sizeof(T));
     }
   }
 #else
@@ -1726,7 +1726,7 @@ void _mspgemm_mca_parallel_vectorized_m4(const sparseMtx<T> &A, const sparseMtx<
 #pragma omp parallel
   {
     MCA<T> accum(mca_len);
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
     for (size_t i = 0; i < A.m; ++i) {
       int m_row_len = M.Rst[i + 1] - M.Rst[i];
       T* accum_ptr = accum.values;
@@ -1765,7 +1765,7 @@ void _mspgemm_mca_parallel_vectorized_m4(const sparseMtx<T> &A, const sparseMtx<
       }
 
       memcpy(C.Val + C.Rst[i], accum.values, m_row_len * sizeof(T));
-      memset(accum.values, 0, mca_len * sizeof(T));
+      memset(accum.values, 0, m_row_len * sizeof(T));
     }
   }
 #else
