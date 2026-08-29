@@ -18,6 +18,10 @@ sparseMtx<int> k_truss(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int> mat
 
 std::vector<float> brandes_batch(bool isParallel, bool isVectorization, const sparseMtx<int> &A, size_t batch_size);
 
+sparseMtx<int> k_truss_test(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization);
+
+int64_t triangle_counting_test(const sparseMtx<int> &A, mspgemmAlgorithm<int> matrixMult, bool isParallel, bool isVectorization);
+
 template <typename FloatType>
 void floating_mask_mult(const sparseMtx<FloatType> &A, size_t mask_density, mspgemmAlgorithm<FloatType> matrixMult, bool isParallel, bool isVectorization) {
     size_t total_elements = static_cast<size_t>(A.m) * A.n;
