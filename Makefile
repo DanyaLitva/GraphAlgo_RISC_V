@@ -35,10 +35,9 @@ clean:
 
 rebuild: clean release
 
-GRAPHS := web-Stanford web-Google pwtk
+GRAPHS := patents amazon0601 webbase-1M road_central mac_econ_fwd500 memchip web-Stanford web-Google pwtk
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm
-ALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk 
-# ASIC_680k NACA0015 kron_g500-logn16 Stanford_Berkeley
+ALL_GRAPHS := ins2 soc-Pokec road_central in-2004 patents Freescale2 memchip Si41Ge41H72 Ga41As41H72 ins2 mac_econ_fwd500 webbase-1M amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk
 
 k_truss_test:
 	echo && echo && echo k_truss with k = $(k) on main graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
@@ -51,6 +50,13 @@ k_truss_small_test:
 	for g in $(SMALL_GRAPHS); do \
 		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
 	done
+
+k_truss_all_test:
+	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
+	for g in $(ALL_GRAPHS); do \
+		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
+	done
+
 
 triangle_test:
 	echo && echo && echo triangle test on main graphs && echo graph,mca_lmul1,mca_lmul2,mca_lmul4,mca_scalar,msa_scalar && \
