@@ -70,6 +70,19 @@ triangle_all_test:
 		./build/triangle_test ./graphs/$$g.bin log.txt $(k); \
 	done
 
+mxm_test:
+	echo && echo && echo mxm test on main graphs && echo graph,mca_lmul1,mca_scalar,msa_scalar && \
+	for g in $(GRAPHS); do \
+		./build/mxm_test ./graphs/$$g.bin log.txt $(k); \
+	done
+
+
+mxm_all_test:
+	echo && echo && echo mxm test on main graphs && echo graph,mca_lmul1,mca_scalar,msa_scalar && \
+	for g in $(ALL_GRAPHS); do \
+		./build/mxm_test ./graphs/$$g.bin log.txt $(k); \
+	done
+
 to_bin:
 	for g in $(ALL_GRAPHS); do \
 		./build/grAlgo ./graphs/$$g.mtx log.txt to_bin; \
