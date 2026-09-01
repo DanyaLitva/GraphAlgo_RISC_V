@@ -35,7 +35,7 @@ clean:
 
 rebuild: clean release
 
-GRAPHS := memchip amazon0312 amazon0601 patents webbase-1M road_central pwtk web-Stanford web-Google
+GRAPHS := memchip amazon0312 amazon0601 patents webbase-1M road_central pwtk web-Stanford web-Google Freescale2
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm mac_econ_fwd500
 ALL_GRAPHS := road_central in-2004 patents Freescale2 memchip mac_econ_fwd500 webbase-1M amazon0312 amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk
 
