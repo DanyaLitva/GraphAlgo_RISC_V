@@ -784,44 +784,85 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T>& A, const sparseMtx<T>&
         int b_pos = B.Rst[k];
         int b_max = B.Rst[k + 1];
         T a_val = A.Val[t];
-
         int m_pos = M.Rst[i];
         int m_max = M.Rst[i] + m_row_len;
+        int b_len = b_max - b_pos;
 
-        while (b_pos < b_max && m_pos < m_max) {
-          int current_b_col = B.Col[b_pos];
+        //Vectorize the longer row
+        if (b_len <= m_row_len) {
+          while (b_pos < b_max && m_pos < m_max) {
+            int current_b_col = B.Col[b_pos];
 
 #if defined(LMUL1)
-          size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
-          vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
-          vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, current_b_col, vl);
-          long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+            size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
+            vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
+            vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, current_b_col, vl);
+            long match_idx = __riscv_vfirst_m_b32(v_match, vl);
 #elif defined(LMUL2)
-          size_t vl = __riscv_vsetvl_e32m2(m_max - m_pos);
-          vint32m2_t v_m_cols = __riscv_vle32_v_i32m2(&M.Col[m_pos], vl);
-          vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_m_cols, current_b_col, vl);
-          long match_idx = __riscv_vfirst_m_b16(v_match, vl);
+            size_t vl = __riscv_vsetvl_e32m2(m_max - m_pos);
+            vint32m2_t v_m_cols = __riscv_vle32_v_i32m2(&M.Col[m_pos], vl);
+            vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_m_cols, current_b_col, vl);
+            long match_idx = __riscv_vfirst_m_b16(v_match, vl);
 #elif defined(LMUL4)
-          size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
-          vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
-          vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, current_b_col, vl);
-          long match_idx = __riscv_vfirst_m_b8(v_match, vl);
+            size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
+            vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
+            vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, current_b_col, vl);
+            long match_idx = __riscv_vfirst_m_b8(v_match, vl);
 #else
 #error "LMUL1, LMUL2, LMUL4 must be defined"
 #endif
-
-          if (match_idx >= 0) {
-            int j = (m_pos - M.Rst[i]) + match_idx;
-            accum_ptr[j] += a_val * B.Val[b_pos];
-            b_pos++;
-            m_pos += match_idx + 1;
-          }
-          else {
-            int last_m_col = M.Col[m_pos + vl - 1];
-            if (current_b_col > last_m_col)
-              m_pos += vl;
-            else
+            if (match_idx >= 0) {
+              int j = (m_pos - M.Rst[i]) + match_idx;
+              accum_ptr[j] += a_val * B.Val[b_pos];
               b_pos++;
+              m_pos += match_idx + 1;
+            }
+            else {
+              int last_m_col = M.Col[m_pos + vl - 1];
+              if (current_b_col > last_m_col)
+                m_pos += vl;
+              else
+                b_pos++;
+            }
+          }
+        }
+        else {
+          while (b_pos < b_max && m_pos < m_max) {
+            int current_m_col = M.Col[m_pos];
+
+#if defined(LMUL1)
+            size_t vl = __riscv_vsetvl_e32m1(b_max - b_pos);
+            vint32m1_t v_b_cols = __riscv_vle32_v_i32m1(&B.Col[b_pos], vl);
+            vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_b_cols, current_m_col, vl);
+            long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+#elif defined(LMUL2)
+            size_t vl = __riscv_vsetvl_e32m2(b_max - b_pos);
+            vint32m2_t v_b_cols = __riscv_vle32_v_i32m2(&B.Col[b_pos], vl);
+            vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_b_cols, current_m_col, vl);
+            long match_idx = __riscv_vfirst_m_b16(v_match, vl);
+#elif defined(LMUL4)
+            size_t vl = __riscv_vsetvl_e32m4(b_max - b_pos);
+            vint32m4_t v_b_cols = __riscv_vle32_v_i32m4(&B.Col[b_pos], vl);
+            vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_b_cols, current_m_col, vl);
+            long match_idx = __riscv_vfirst_m_b8(v_match, vl);
+#else
+#error "LMUL1, LMUL2, LMUL4 must be defined"
+#endif
+            if (match_idx >= 0) {
+              int j = m_pos - M.Rst[i];
+              accum_ptr[j] += a_val * B.Val[b_pos + match_idx];
+              b_pos += match_idx + 1;
+              m_pos++;
+            }
+            else {
+              int last_b_col = B.Col[b_pos + vl - 1];
+              if (current_m_col > last_b_col) {
+                b_pos += vl;
+              }
+              else {
+                m_pos++;
+              }
+            }
           }
         }
       }
