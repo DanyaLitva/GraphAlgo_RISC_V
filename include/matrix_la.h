@@ -764,7 +764,7 @@ void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, 
 
 // MCA parallel vectorized (generic)
 template<typename T, typename U>
-void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
+void _mspgemm_mca_parallel_vectorized(const sparseMtx<T>& A, const sparseMtx<T>& B, const sparseMtx<U>& M, sparseMtx<T>& C) {
 #ifdef USE_RVV
   int mca_len = 0;
   for (size_t i = 0; i < A.m; ++i)
@@ -792,22 +792,22 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
           int current_b_col = B.Col[b_pos];
 
 #if defined(LMUL1)
-    size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
-    vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
-    vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, current_b_col, vl);
-    long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+          size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
+          vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
+          vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, current_b_col, vl);
+          long match_idx = __riscv_vfirst_m_b32(v_match, vl);
 #elif defined(LMUL2)
-    size_t vl = __riscv_vsetvl_e32m2(m_max - m_pos);
-    vint32m2_t v_m_cols = __riscv_vle32_v_i32m2(&M.Col[m_pos], vl);
-    vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_m_cols, current_b_col, vl);
-    long match_idx = __riscv_vfirst_m_b16(v_match, vl);
+          size_t vl = __riscv_vsetvl_e32m2(m_max - m_pos);
+          vint32m2_t v_m_cols = __riscv_vle32_v_i32m2(&M.Col[m_pos], vl);
+          vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_m_cols, current_b_col, vl);
+          long match_idx = __riscv_vfirst_m_b16(v_match, vl);
 #elif defined(LMUL4)
-    size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
-    vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
-    vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, current_b_col, vl);
-    long match_idx = __riscv_vfirst_m_b8(v_match, vl);
+          size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
+          vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
+          vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, current_b_col, vl);
+          long match_idx = __riscv_vfirst_m_b8(v_match, vl);
 #else
-    #error "LMUL1, LMUL2, LMUL4 must be defined"
+#error "LMUL1, LMUL2, LMUL4 must be defined"
 #endif
 
           if (match_idx >= 0) {
@@ -831,7 +831,7 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
     }
   }
 #else
-  std::cerr << "No RVV build for vectorization!\n"; 
+  std::cerr << "No RVV build for vectorization!\n";
   _mspgemm_mca_parallel_scalar(A, B, M, C);
 #endif
 }
