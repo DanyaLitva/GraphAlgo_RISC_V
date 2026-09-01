@@ -89,27 +89,27 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     cout <<  min_time << ",";
 
 
-    min_time = LLONG_MAX;
-    rvv_test_lmul = 2;
-    for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      triangle_counting_test(TestMtx, mspgemm_mca_m<int>, true, true);
-      time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
-      if(time<min_time) min_time = time;
-    }    
+    // min_time = LLONG_MAX;
+    // rvv_test_lmul = 2;
+    // for(size_t i = 0; i < COUNT_REPEAT; ++i){
+    //   triangle_counting_test(TestMtx, mspgemm_mca_m<int>, true, true);
+    //   time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
+    //   if(time<min_time) min_time = time;
+    // }    
     
-    cout << min_time << ",";
+    // cout << min_time << ",";
 
 
 
-    min_time = LLONG_MAX;
-    rvv_test_lmul = 4;
-    for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      triangle_counting_test(TestMtx, mspgemm_mca_m<int>, true, true);
-      time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
-      if(time<min_time) min_time = time;
-    }    
+    // min_time = LLONG_MAX;
+    // rvv_test_lmul = 4;
+    // for(size_t i = 0; i < COUNT_REPEAT; ++i){
+    //   triangle_counting_test(TestMtx, mspgemm_mca_m<int>, true, true);
+    //   time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
+    //   if(time<min_time) min_time = time;
+    // }    
     
-    cout <<  min_time << ",";
+    // cout <<  min_time << ",";
 
 
     min_time = LLONG_MAX;
