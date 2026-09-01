@@ -58,10 +58,15 @@ add_executable(triangle_test
     src/triangle_test.cpp
 )
 
+add_executable(mxm_test
+    src/mxm_test.cpp
+)
+
 target_link_libraries(grAlgo PRIVATE grAlgoLib)
 target_link_libraries(floatMult PRIVATE grAlgoLib)
 target_link_libraries(k_truss_test PRIVATE grAlgoLib)
 target_link_libraries(triangle_test PRIVATE grAlgoLib)
+target_link_libraries(mxm_test PRIVATE grAlgoLib)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")
