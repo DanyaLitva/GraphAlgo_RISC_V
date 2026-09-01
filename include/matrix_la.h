@@ -729,9 +729,11 @@ template<typename T, typename U>
 void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     //std::cerr << "Scalar\n";
     int mca_len = 0;
-    for (size_t i = 0; i < A.m; ++i)
-        if (M.Rst[i+1] - M.Rst[i] > mca_len)
-            mca_len = M.Rst[i+1] - M.Rst[i];
+#pragma omp parallel for reduction(max:mca_len)
+    for (size_t i = 0; i < A.m; ++i) {
+        int len = M.Rst[i + 1] - M.Rst[i];
+        if (len > mca_len) mca_len = len;
+    }
 
 #pragma omp parallel
     {
@@ -767,10 +769,12 @@ template<typename T, typename U>
 void _mspgemm_mca_parallel_vectorized(const sparseMtx<T>& A, const sparseMtx<T>& B, const sparseMtx<U>& M, sparseMtx<T>& C) {
 #ifdef USE_RVV
   int mca_len = 0;
-  for (size_t i = 0; i < A.m; ++i)
-    if (M.Rst[i + 1] - M.Rst[i] > mca_len)
-      mca_len = M.Rst[i + 1] - M.Rst[i];
-
+#pragma omp parallel for reduction(max:mca_len)
+    for (size_t i = 0; i < A.m; ++i) {
+        int len = M.Rst[i + 1] - M.Rst[i];
+        if (len > mca_len) mca_len = len;
+    }
+    
 #pragma omp parallel
   {
     MCA<T> accum(mca_len);

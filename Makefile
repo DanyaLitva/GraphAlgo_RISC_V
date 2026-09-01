@@ -37,7 +37,7 @@ rebuild: clean release
 
 GRAPHS := memchip amazon0312 amazon0601 patents webbase-1M road_central pwtk web-Stanford web-Google
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm mac_econ_fwd500
-ALL_GRAPHS := ins2 soc-Pokec road_central in-2004 patents Freescale2 memchip Si41Ge41H72 Ga41As41H72 ins2 mac_econ_fwd500 webbase-1M amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk
+ALL_GRAPHS := road_central in-2004 patents Freescale2 memchip mac_econ_fwd500 webbase-1M amazon0312 amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk
 
 k_truss_test:
 	echo && echo && echo k_truss with k = $(k) on main graphs && echo graph,mca_lmul1,mca_scalar,msa_scalar && \
