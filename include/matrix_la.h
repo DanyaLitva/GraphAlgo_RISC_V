@@ -757,7 +757,7 @@ void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, 
             }
 
             memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
-            memset(accum.values, 0, mca_len * sizeof(T));
+            memset(accum.values, 0, m_row_len * sizeof(T));
         }
     }
 }
