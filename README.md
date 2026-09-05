@@ -1,3 +1,5 @@
+Актуальная векторизованная версия MCA: https://github.com/DanyaLitva/GraphAlgo_RISC_V/blob/4ab5fd3fa08867a5d37b09920a063010873c18c4/include/matrix_la.h#L769
+
 Инструкция для сборки:  
 > make - стандартная сборка  
 > make rvv - RISC-V сборка с MCA_LMUL=1 (кросскомпиляция)  
