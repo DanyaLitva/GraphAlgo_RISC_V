@@ -8,10 +8,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(OpenMP REQUIRED)
 
 option(WITH_RVV "Enable RISC-V Vector intrinsics" OFF)
-set(LMUL "1" CACHE STRING "RVV LMUL value (1, 2, 4)")
+set(MCA_LMUL "1" CACHE STRING "RVV LMUL value (1, 2, 4)")
 
-if(WITH_RVV AND NOT LMUL MATCHES "^(1|2|4)$")
-    message(FATAL_ERROR "LMUL must be 1, 2, or 4")
+if(WITH_RVV AND NOT MCA_LMUL MATCHES "^(1|2|4)$")
+    message(FATAL_ERROR "MCA_LMUL must be 1, 2, or 4")
 endif()
 
 add_library(grAlgoLib STATIC
@@ -30,15 +30,15 @@ target_include_directories(grAlgoLib PUBLIC include)
 target_link_libraries(grAlgoLib PUBLIC OpenMP::OpenMP_CXX)
 
 
-#-DLMUL=1,2,4
+#-DMCA_LMUL=1,2,4
 if(WITH_RVV)
     target_compile_definitions(grAlgoLib PUBLIC USE_RVV)
-    if(LMUL EQUAL 1)
-        target_compile_definitions(grAlgoLib PUBLIC LMUL1)
-    elseif(LMUL EQUAL 2)
-        target_compile_definitions(grAlgoLib PUBLIC LMUL2)
-    elseif(LMUL EQUAL 4)
-        target_compile_definitions(grAlgoLib PUBLIC LMUL4)
+    if(MCA_LMUL EQUAL 1)
+        target_compile_definitions(grAlgoLib PUBLIC MCA_LMUL1)
+    elseif(MCA_LMUL EQUAL 2)
+        target_compile_definitions(grAlgoLib PUBLIC MCA_LMUL2)
+    elseif(MCA_LMUL EQUAL 4)
+        target_compile_definitions(grAlgoLib PUBLIC MCA_LMUL4)
     endif()
 endif()
 
