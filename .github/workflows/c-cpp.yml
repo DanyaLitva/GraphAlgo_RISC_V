@@ -15,5 +15,7 @@ jobs:
     - uses: actions/checkout@v4
     - name: make
       run: make
-    - name: run_test_mca
+    - name: run_scal_test_mca
       run: make && ./build/grAlgo ./graphs/G43.mtx log.txt launch mxm par scal mca && ./build/grAlgo ./graphs/G43.mtx log.txt launch mxm par vec mca
+    - name: run_scal_test_msa
+      run: make && ./build/grAlgo ./graphs/G43.mtx log.txt launch mxm par scal msa && ./build/grAlgo ./graphs/G43.mtx log.txt launch mxm par vec msa
