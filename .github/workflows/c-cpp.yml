@@ -1,0 +1,23 @@
+name: C/C++ CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: make
+      run: make
+    - name: run scal mxm test
+      run: ./build/grAlgo ./graphs/netherlands_osm.mtx log.txt launch mxm par scal mca && ./build/grAlgo ./graphs/netherlands_osm.mtx log.txt launch mxm par scal msa
+    - name: run scal k-truss test
+      run: ./build/grAlgo ./graphs/netherlands_osm.mtx log.txt launch k-truss par scal mca 3 && ./build/grAlgo ./graphs/netherlands_osm.mtx log.txt launch k-truss par scal msa 3
+    - name: run scal triangle test
+      run: ./build/grAlgo ./graphs/netherlands_osm.mtx log.txt launch triangle par scal mca && ./build/grAlgo ./graphs/netherlands_osm.mtx log.txt launch triangle par scal msa
