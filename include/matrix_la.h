@@ -913,8 +913,10 @@ void _mspgemm_msa_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
         int m_max = M.Rst[i+1];
 
         // ��������� ���������� ��������� ������������
-        for (int j = m_min; j < m_max; ++j)
+        for (int j = m_min; j < m_max; ++j) {
             accum.state[M.Col[j]] = MSA<T>::ALLOWED;
+            accum.value[M.Col[j]] = T(0);
+        }
 
         // ������� i-� ������ ������� C
         for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) {
@@ -982,15 +984,269 @@ void _mspgemm_msa_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> 
     _mspgemm_msa_parallel_scalar(A, B, M, C);
 }
 
+// MSA parallel vectorized specialization for double
+template<typename U>
+inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<double> &A, const sparseMtx<double> &B, const sparseMtx<U> &M, sparseMtx<double> &C) {
+#ifdef USE_RVV
+#pragma omp parallel
+    {
+        MSA<double> accum(B.n);
+
+#pragma omp for schedule(dynamic, 32)
+        for (size_t i = 0; i < A.m; ++i) {
+            int m_min = M.Rst[i];
+            int m_max = M.Rst[i + 1];
+
+            int j_init = m_min;
+            int remain_init = m_max - m_min;
+            while (remain_init > 0) {
+                size_t vl = __riscv_vsetvl_e64m2(remain_init);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 3, vl);
+
+                vfloat64m2_t v_zero = __riscv_vfmv_v_f_f64m2(0.0, vl);
+
+                __riscv_vsuxei32_v_f64m2(accum.value, v_byte_offsets, v_zero, vl);
+
+                j_init += vl;
+                remain_init -= vl;
+            }
+            //for (int j = m_min; j < m_max; ++j)
+                //accum.value[M.Col[j]] = zero;
+
+            for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
+                int k = A.Col[t];
+                int b_pos = B.Rst[k];
+                int b_max = B.Rst[k + 1];
+                double   a_val = A.Val[t];
+
+                int j_calc = b_pos;
+                int remain_calc = b_max - b_pos;
+                while (remain_calc > 0) {
+                    size_t vl = __riscv_vsetvl_e64m2(remain_calc);
+
+                    vuint32m1_t vb_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
+
+                    vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 3, vl);
+
+                    vfloat64m2_t vb_val = __riscv_vle64_v_f64m2(&B.Val[j_calc], vl);
+
+                    vfloat64m2_t v_acc = __riscv_vluxei32_v_f64m2(accum.value, v_byte_offsets, vl);
+
+                    v_acc = __riscv_vfmacc_vf_f64m2(v_acc, a_val, vb_val, vl);
+
+                    __riscv_vsuxei32_v_f64m2(accum.value, v_byte_offsets, v_acc, vl);
+
+                    j_calc += vl;
+                    remain_calc -= vl;
+                }
+                //for (int j = b_pos; j < b_max; ++j)
+                    //accum.value[B.Col[j]] += a_val * B.Val[j];
+            }
+
+            int j_store = m_min;
+            int remain_store = m_max - m_min;
+            while (remain_store > 0) {
+                size_t vl = __riscv_vsetvl_e64m2(remain_store);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 3, vl);
+
+                vfloat64m2_t v_acc_res = __riscv_vluxei32_v_f64m2(accum.value, v_byte_offsets, vl);
+
+                __riscv_vse64_v_f64m2(&C.Val[j_store], v_acc_res, vl);
+
+                j_store += vl;
+                remain_store -= vl;
+            }
+            //for (int j = m_min; j < m_max; ++j) {
+            //    C.Val[j] = accum.value[M.Col[j]];
+            //}
+        }
+    }
+#else
+    _mspgemm_msa_parallel_scalar(A, B, M, C);
+#endif
+}
+
+// MSA parallel vectorized specialization for float
+template<typename U>
+inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<float>& A, const sparseMtx<float>& B, const sparseMtx<U>& M, sparseMtx<float>& C) {
+#ifdef USE_RVV
+#pragma omp parallel
+    {
+        MSA<float> accum(B.n);
+
+#pragma omp for schedule(dynamic, 32)
+        for (size_t i = 0; i < A.m; ++i) {
+            int m_min = M.Rst[i];
+            int m_max = M.Rst[i + 1];
+
+            int j_init = m_min;
+            int remain_init = m_max - m_min;
+            while (remain_init > 0) {
+                size_t vl = __riscv_vsetvl_e32m1(remain_init);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
+
+                vfloat32m1_t v_zero = __riscv_vfmv_v_f_f32m1(0.0, vl);
+
+                __riscv_vsuxei32_v_f32m1(accum.value, v_byte_offsets, v_zero, vl);
+
+                j_init += vl;
+                remain_init -= vl;
+            }
+            //for (int j = m_min; j < m_max; ++j)
+                //accum.value[M.Col[j]] = zero;
+
+            for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
+                int k = A.Col[t];
+                int b_pos = B.Rst[k];
+                int b_max = B.Rst[k + 1];
+                double   a_val = A.Val[t];
+
+                int j_calc = b_pos;
+                int remain_calc = b_max - b_pos;
+                while (remain_calc > 0) {
+                    size_t vl = __riscv_vsetvl_e32m1(remain_calc);
+
+                    vuint32m1_t vb_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
+
+                    vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 2, vl);
+
+                    vfloat32m1_t vb_val = __riscv_vle32_v_f32m1(&B.Val[j_calc], vl);
+
+                    vfloat32m1_t v_acc = __riscv_vluxei32_v_f32m1(accum.value, v_byte_offsets, vl);
+
+                    v_acc = __riscv_vfmacc_vf_f32m1(v_acc, a_val, vb_val, vl);
+
+                    __riscv_vsuxei32_v_f32m1(accum.value, v_byte_offsets, v_acc, vl);
+
+                    j_calc += vl;
+                    remain_calc -= vl;
+                }
+                //for (int j = b_pos; j < b_max; ++j)
+                    //accum.value[B.Col[j]] += a_val * B.Val[j];
+            }
+
+            int j_store = m_min;
+            int remain_store = m_max - m_min;
+            while (remain_store > 0) {
+                size_t vl = __riscv_vsetvl_e32m1(remain_store);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
+
+                vfloat32m1_t v_acc_res = __riscv_vluxei32_v_f32m1(accum.value, v_byte_offsets, vl);
+
+                __riscv_vse32_v_f32m1(&C.Val[j_store], v_acc_res, vl);
+
+                j_store += vl;
+                remain_store -= vl;
+            }
+            //for (int j = m_min; j < m_max; ++j) {
+            //    C.Val[j] = accum.value[M.Col[j]];
+            //}
+        }
+    }
+#else
+    _mspgemm_msa_parallel_scalar(A, B, M, C);
+#endif
+}
+
+
 // MSA parallel vectorized specialization for int
 template<typename U>
-inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int> &A, const sparseMtx<int> &B, const sparseMtx<U> &M, sparseMtx<int> &C) {
+inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int>& A, const sparseMtx<int>& B, const sparseMtx<U>& M, sparseMtx<int>& C) {
 #ifdef USE_RVV
-    //std::cerr << "Vectorization spec int\n";
+#pragma omp parallel
+    {
+        MSA<int> accum(B.n);
+
+#pragma omp for schedule(dynamic, 32)
+        for (size_t i = 0; i < A.m; ++i) {
+            int m_min = M.Rst[i];
+            int m_max = M.Rst[i + 1];
+
+            int j_init = m_min;
+            int remain_init = m_max - m_min;
+            while (remain_init > 0) {
+                size_t vl = __riscv_vsetvl_e32m1(remain_init);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
+
+                vint32m1_t v_zero = __riscv_vmv_v_x_i32m1(0, vl);
+
+                __riscv_vsuxei32_v_i32m1(accum.value, v_byte_offsets, v_zero, vl);
+
+                j_init += vl;
+                remain_init -= vl;
+            }
+            //for (int j = m_min; j < m_max; ++j)
+                //accum.value[M.Col[j]] = 0;
+
+            for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
+                int k = A.Col[t];
+                int b_pos = B.Rst[k];
+                int b_max = B.Rst[k + 1];
+                int a_val = A.Val[t];
+
+                int j_calc = b_pos;
+                int remain_calc = b_max - b_pos;
+                while (remain_calc > 0) {
+                    size_t vl = __riscv_vsetvl_e32m1(remain_calc);
+
+                    vuint32m1_t vb_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
+
+                    vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 2, vl);
+
+                    vint32m1_t vb_val = __riscv_vle32_v_i32m1(&B.Val[j_calc], vl);
+
+                    vint32m1_t v_acc = __riscv_vluxei32_v_i32m1(accum.value, v_byte_offsets, vl);
+
+                    v_acc = __riscv_vmacc_vx_i32m1(v_acc, a_val, vb_val, vl);
+
+                    __riscv_vsuxei32_v_i32m1(accum.value, v_byte_offsets, v_acc, vl);
+
+                    j_calc += vl;
+                    remain_calc -= vl;
+                }
+                //for (int j = b_pos; j < b_max; ++j)
+                    //accum.value[B.Col[j]] += a_val * B.Val[j];
+            }
+
+            int j_store = m_min;
+            int remain_store = m_max - m_min;
+            while (remain_store > 0) {
+                size_t vl = __riscv_vsetvl_e32m1(remain_store);
+
+                vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
+
+                vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
+
+                vint32m1_t v_acc_res = __riscv_vluxei32_v_i32m1(accum.value, v_byte_offsets, vl);
+
+                __riscv_vse32_v_i32m1(&C.Val[j_store], v_acc_res, vl);
+
+                j_store += vl;
+                remain_store -= vl;
+            }
+            //for (int j = m_min; j < m_max; ++j) {
+            //    C.Val[j] = accum.value[M.Col[j]];
+            //}
+        }
+    }
 #else
-    std::cerr << "No RVV build for vectorization!\n";
-#endif
     _mspgemm_msa_parallel_scalar(A, B, M, C);
+#endif
 }
 
 // MSA dispatcher
