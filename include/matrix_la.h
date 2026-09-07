@@ -1177,16 +1177,27 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int>& A, const spar
             int j_init = m_min;
             int remain_init = m_max - m_min;
             while (remain_init > 0) {
+#if defined(MSA_LMUL1)
                 size_t vl = __riscv_vsetvl_e32m1(remain_init);
-
                 vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
-
                 vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
-
                 vint32m1_t v_zero = __riscv_vmv_v_x_i32m1(0, vl);
-
                 __riscv_vsuxei32_v_i32m1(accum.value, v_byte_offsets, v_zero, vl);
-
+#elif defined(MSA_LMUL2)
+                size_t vl = __riscv_vsetvl_e32m2(remain_init);
+                vuint32m2_t vm_col = __riscv_vle32_v_u32m2(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
+                vuint32m2_t v_byte_offsets = __riscv_vsll_vx_u32m2(vm_col, 2, vl);
+                vint32m2_t v_zero = __riscv_vmv_v_x_i32m2(0, vl);
+                __riscv_vsuxei32_v_i32m2(accum.value, v_byte_offsets, v_zero, vl);
+#elif defined(MSA_LMUL4)
+                size_t vl = __riscv_vsetvl_e32m4(remain_init);
+                vuint32m4_t vm_col = __riscv_vle32_v_u32m4(reinterpret_cast<const uint32_t*>(&M.Col[j_init]), vl);
+                vuint32m4_t v_byte_offsets = __riscv_vsll_vx_u32m4(vm_col, 2, vl);
+                vint32m4_t v_zero = __riscv_vmv_v_x_i32m4(0, vl);
+                __riscv_vsuxei32_v_i32m4(accum.value, v_byte_offsets, v_zero, vl);
+#else
+#error "MSA_LMUL1, MSA_LMUL2, MSA_LMUL4 must be defined"
+#endif
                 j_init += vl;
                 remain_init -= vl;
             }
@@ -1202,20 +1213,33 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int>& A, const spar
                 int j_calc = b_pos;
                 int remain_calc = b_max - b_pos;
                 while (remain_calc > 0) {
+#if defined(MSA_LMUL1)
                     size_t vl = __riscv_vsetvl_e32m1(remain_calc);
-
                     vuint32m1_t vb_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
-
                     vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vb_col, 2, vl);
-
                     vint32m1_t vb_val = __riscv_vle32_v_i32m1(&B.Val[j_calc], vl);
-
                     vint32m1_t v_acc = __riscv_vluxei32_v_i32m1(accum.value, v_byte_offsets, vl);
-
                     v_acc = __riscv_vmacc_vx_i32m1(v_acc, a_val, vb_val, vl);
-
                     __riscv_vsuxei32_v_i32m1(accum.value, v_byte_offsets, v_acc, vl);
-
+#elif defined(MSA_LMUL2)
+                    size_t vl = __riscv_vsetvl_e32m2(remain_calc);
+                    vuint32m2_t vb_col = __riscv_vle32_v_u32m2(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
+                    vuint32m2_t v_byte_offsets = __riscv_vsll_vx_u32m2(vb_col, 2, vl);
+                    vint32m2_t vb_val = __riscv_vle32_v_i32m2(&B.Val[j_calc], vl);
+                    vint32m2_t v_acc = __riscv_vluxei32_v_i32m2(accum.value, v_byte_offsets, vl);
+                    v_acc = __riscv_vmacc_vx_i32m2(v_acc, a_val, vb_val, vl);
+                    __riscv_vsuxei32_v_i32m2(accum.value, v_byte_offsets, v_acc, vl);
+#elif defined(MSA_LMUL4)
+                    size_t vl = __riscv_vsetvl_e32m4(remain_calc);
+                    vuint32m4_t vb_col = __riscv_vle32_v_u32m4(reinterpret_cast<const uint32_t*>(&B.Col[j_calc]), vl);
+                    vuint32m4_t v_byte_offsets = __riscv_vsll_vx_u32m4(vb_col, 2, vl);
+                    vint32m4_t vb_val = __riscv_vle32_v_i32m4(&B.Val[j_calc], vl);
+                    vint32m4_t v_acc = __riscv_vluxei32_v_i32m4(accum.value, v_byte_offsets, vl);
+                    v_acc = __riscv_vmacc_vx_i32m4(v_acc, a_val, vb_val, vl);
+                    __riscv_vsuxei32_v_i32m4(accum.value, v_byte_offsets, v_acc, vl);
+#else
+#error "MSA_LMUL1, MSA_LMUL2, MSA_LMUL4 must be defined"
+#endif
                     j_calc += vl;
                     remain_calc -= vl;
                 }
@@ -1226,16 +1250,27 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int>& A, const spar
             int j_store = m_min;
             int remain_store = m_max - m_min;
             while (remain_store > 0) {
+#if defined(MSA_LMUL1)
                 size_t vl = __riscv_vsetvl_e32m1(remain_store);
-
                 vuint32m1_t vm_col = __riscv_vle32_v_u32m1(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
-
                 vuint32m1_t v_byte_offsets = __riscv_vsll_vx_u32m1(vm_col, 2, vl);
-
                 vint32m1_t v_acc_res = __riscv_vluxei32_v_i32m1(accum.value, v_byte_offsets, vl);
-
                 __riscv_vse32_v_i32m1(&C.Val[j_store], v_acc_res, vl);
-
+#elif defined(MSA_LMUL2)
+                size_t vl = __riscv_vsetvl_e32m2(remain_store);
+                vuint32m2_t vm_col = __riscv_vle32_v_u32m2(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
+                vuint32m2_t v_byte_offsets = __riscv_vsll_vx_u32m2(vm_col, 2, vl);
+                vint32m2_t v_acc_res = __riscv_vluxei32_v_i32m2(accum.value, v_byte_offsets, vl);
+                __riscv_vse32_v_i32m2(&C.Val[j_store], v_acc_res, vl);
+#elif defined(MSA_LMUL4)
+                size_t vl = __riscv_vsetvl_e32m4(remain_store);
+                vuint32m4_t vm_col = __riscv_vle32_v_u32m4(reinterpret_cast<const uint32_t*>(&M.Col[j_store]), vl);
+                vuint32m4_t v_byte_offsets = __riscv_vsll_vx_u32m4(vm_col, 2, vl);
+                vint32m4_t v_acc_res = __riscv_vluxei32_v_i32m4(accum.value, v_byte_offsets, vl);
+                __riscv_vse32_v_i32m4(&C.Val[j_store], v_acc_res, vl);
+#else
+#error "MSA_LMUL1, MSA_LMUL2, MSA_LMUL4 must be defined"
+#endif
                 j_store += vl;
                 remain_store -= vl;
             }
