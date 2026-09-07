@@ -1245,6 +1245,7 @@ inline void _mspgemm_msa_parallel_vectorized(const sparseMtx<int>& A, const spar
         }
     }
 #else
+    std::cerr << "No RVV build for vectorization!\n";
     _mspgemm_msa_parallel_scalar(A, B, M, C);
 #endif
 }

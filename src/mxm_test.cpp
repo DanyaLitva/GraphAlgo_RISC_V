@@ -128,6 +128,17 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
+      mspgemm_msa<int>(true, true, TestMtx, TestMtx, TestMtx, MxmResult);
+      finish = chrono::steady_clock::now();
+      time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
+      if(time<min_time) min_time = time;
+    }    
+    
+    cout <<  min_time << ",";
+
+    min_time = LLONG_MAX;
+    for(size_t i = 0; i < COUNT_REPEAT; ++i){
+      start = chrono::steady_clock::now();
       mspgemm_msa<int>(true, false, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
