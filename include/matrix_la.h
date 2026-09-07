@@ -720,7 +720,7 @@ void _mspgemm_mca_sequential(const sparseMtx<T> &A, const sparseMtx<T> &B, const
         // ќќќќќќќќќќ i-ќ ќќќќќќ ќќќќќќќ C
         memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
         // ќќќќќќќ ќќќќќќќќќќќќ ќќќ ќќќќќќќќќ ќќќќќќќќ
-        memset(accum.values, 0, mca_len * sizeof(T));
+        memset(accum.values, 0, m_row_len * sizeof(T));
     }
 }
 
@@ -729,15 +729,17 @@ template<typename T, typename U>
 void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
     //std::cerr << "Scalar\n";
     int mca_len = 0;
-    for (size_t i = 0; i < A.m; ++i)
-        if (M.Rst[i+1] - M.Rst[i] > mca_len)
-            mca_len = M.Rst[i+1] - M.Rst[i];
+#pragma omp parallel for reduction(max:mca_len)
+    for (size_t i = 0; i < A.m; ++i) {
+        int len = M.Rst[i + 1] - M.Rst[i];
+        if (len > mca_len) mca_len = len;
+    }
 
 #pragma omp parallel
     {
         MCA<T> accum(mca_len);
 
-#pragma omp for schedule(dynamic)
+#pragma omp for schedule(dynamic, 32)
         for (size_t i = 0; i < A.m; ++i) {
             int m_row_len = M.Rst[i+1] - M.Rst[i];
             int m_pos;
@@ -757,110 +759,114 @@ void _mspgemm_mca_parallel_scalar(const sparseMtx<T> &A, const sparseMtx<T> &B, 
             }
 
             memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(T));
-            memset(accum.values, 0, mca_len * sizeof(T));
+            memset(accum.values, 0, m_row_len * sizeof(T));
         }
     }
 }
 
 // MCA parallel vectorized (generic)
 template<typename T, typename U>
-void _mspgemm_mca_parallel_vectorized(const sparseMtx<T> &A, const sparseMtx<T> &B, const sparseMtx<U> &M, sparseMtx<T> &C) {
-    //std::cerr << "Vectorization no spec\n";
-    _mspgemm_mca_parallel_scalar(A, B, M, C);
-}
-
-// MCA parallel vectorized specialization for double
-template<typename U>
-inline void _mspgemm_mca_parallel_vectorized(const sparseMtx<double> &A, const sparseMtx<double> &B, const sparseMtx<U> &M, sparseMtx<double> &C) {
+void _mspgemm_mca_parallel_vectorized(const sparseMtx<T>& A, const sparseMtx<T>& B, const sparseMtx<U>& M, sparseMtx<T>& C) {
 #ifdef USE_RVV
-    //std::cerr << "Vectorization spec double\n"; 
-
-    int mca_len = 0; 
-    for (size_t i = 0; i < A.m; ++i) { 
-        if (M.Rst[i+1] - M.Rst[i] > mca_len) { 
-            mca_len = M.Rst[i+1] - M.Rst[i]; 
-        }
+  int mca_len = 0;
+#pragma omp parallel for reduction(max:mca_len)
+    for (size_t i = 0; i < A.m; ++i) {
+        int len = M.Rst[i + 1] - M.Rst[i];
+        if (len > mca_len) mca_len = len;
     }
-
+    
 #pragma omp parallel
-    {
-        MCA<double> accum(mca_len); 
+  {
+    MCA<T> accum(mca_len);
+#pragma omp for schedule(dynamic, 32)
+    for (size_t i = 0; i < A.m; ++i) {
+      int m_row_len = M.Rst[i + 1] - M.Rst[i];
+      T* accum_ptr = accum.values;
 
-#pragma omp for schedule(dynamic)
-        for (size_t i = 0; i < A.m; ++i) { 
-            int m_row_len = M.Rst[i+1] - M.Rst[i]; 
-            double* accum_ptr = accum.values; 
-            
-            for (int t = A.Rst[i]; t < A.Rst[i+1]; ++t) { 
-                int k = A.Col[t]; 
-                int b_pos = B.Rst[k]; 
-                int b_max = B.Rst[k+1]; 
-                double a_val = A.Val[t]; 
-                
-                int m_pos = M.Rst[i]; 
-                int m_max = M.Rst[i] + m_row_len; 
+      for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
+        int k = A.Col[t];
+        int b_pos = B.Rst[k];
+        int b_max = B.Rst[k + 1];
+        T a_val = A.Val[t];
+        int m_pos = M.Rst[i];
+        int m_max = M.Rst[i] + m_row_len;
 
-                
-                while (b_pos < b_max && m_pos < m_max) {
-                    int current_b_col = B.Col[b_pos]; 
-                    
-                    //m1 version
-                    /*
-                    size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
-                    
-                    vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
-                    
-                    vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, current_b_col, vl);
-                    
-                    long match_idx = __riscv_vfirst_m_b32(v_match, vl);
-                    */
-
-                    //m4 version
-                    // Запрашиваем длину вектора
-                    size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
-
-                    // Загружаем вектор индексов
-                    vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
-
-                    // Сравниваем
-                    vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, current_b_col, vl);
-
-                    // Ищем индекс первого совпадения
-                    long match_idx = __riscv_vfirst_m_b8(v_match, vl);
-                    
-                    if (match_idx >= 0) {
-                        // Вычисляем абсолютное смещение j в accum_ptr
-                        int j = (m_pos - M.Rst[i]) + match_idx;
-                        accum_ptr[j] += a_val * B.Val[b_pos]; 
-                        
-                        b_pos++;
-                        // Поскольку M.Col строго возрастает, можем перепрыгнуть пройденное
-                        m_pos += match_idx + 1; 
-                    } else {
-                        // Совпадений в текущем векторе M нет.
-                        // Проверяем последний загруженный элемент вектора M, чтобы понять, 
-                        // кто "отстает" и кого нужно двигать дальше.
-                        int last_m_col = M.Col[m_pos + vl - 1];
-                        
-                        if (current_b_col > last_m_col) {
-                            // current_b_col больше всех элементов в векторе, шагаем M вперед на весь вектор (vl)
-                            m_pos += vl;
-                        } else {
-                            // current_b_col меньше последнего элемента M, значит его вообще нет в этом блоке M. Шагаем B.
-                            b_pos++;
-                        }
-                    }
-                }
-
-            }
-
-            memcpy(C.Val + C.Rst[i], accum.values, m_row_len*sizeof(double)); 
-            memset(accum.values, 0, mca_len * sizeof(double)); 
-        }
-    }
+        //Vectorize the longer row
+        if ((b_max - b_pos) <= m_row_len) {   //vectorize M row
+          while (b_pos < b_max && m_pos < m_max) {
+#if defined(MCA_LMUL1)
+            size_t vl = __riscv_vsetvl_e32m1(m_max - m_pos);
+            vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M.Col[m_pos], vl);
+            vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, B.Col[b_pos], vl);
+            long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+#elif defined(MCA_LMUL2)
+            size_t vl = __riscv_vsetvl_e32m2(m_max - m_pos);
+            vint32m2_t v_m_cols = __riscv_vle32_v_i32m2(&M.Col[m_pos], vl);
+            vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_m_cols, B.Col[b_pos], vl);
+            long match_idx = __riscv_vfirst_m_b16(v_match, vl);
+#elif defined(MCA_LMUL4)
+            size_t vl = __riscv_vsetvl_e32m4(m_max - m_pos);
+            vint32m4_t v_m_cols = __riscv_vle32_v_i32m4(&M.Col[m_pos], vl);
+            vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_m_cols, B.Col[b_pos], vl);
+            long match_idx = __riscv_vfirst_m_b8(v_match, vl);
 #else
-    //std::cerr << "No RVV build\n"; 
-    _mspgemm_mca_parallel_scalar(A, B, M, C); 
+#error "MCA_LMUL1, MCA_LMUL2, MCA_LMUL4 must be defined"
+#endif
+            if (match_idx >= 0) {
+              accum_ptr[(m_pos - M.Rst[i]) + match_idx] += a_val * B.Val[b_pos];
+              b_pos++;
+              m_pos += match_idx + 1;
+            }
+            else {
+              if (B.Col[b_pos] > M.Col[m_pos + vl - 1])
+                m_pos += vl;
+              else
+                b_pos++;
+            }
+          }
+        }
+        else {   //vectorize B row
+          while (b_pos < b_max && m_pos < m_max) {
+#if defined(MCA_LMUL1)
+            size_t vl = __riscv_vsetvl_e32m1(b_max - b_pos);
+            vint32m1_t v_b_cols = __riscv_vle32_v_i32m1(&B.Col[b_pos], vl);
+            vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_b_cols, M.Col[m_pos], vl);
+            long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+#elif defined(MCA_LMUL2)
+            size_t vl = __riscv_vsetvl_e32m2(b_max - b_pos);
+            vint32m2_t v_b_cols = __riscv_vle32_v_i32m2(&B.Col[b_pos], vl);
+            vbool16_t v_match = __riscv_vmseq_vx_i32m2_b16(v_b_cols, M.Col[m_pos], vl);
+            long match_idx = __riscv_vfirst_m_b16(v_match, vl);
+#elif defined(MCA_LMUL4)
+            size_t vl = __riscv_vsetvl_e32m4(b_max - b_pos);
+            vint32m4_t v_b_cols = __riscv_vle32_v_i32m4(&B.Col[b_pos], vl);
+            vbool8_t v_match = __riscv_vmseq_vx_i32m4_b8(v_b_cols, M.Col[m_pos], vl);
+            long match_idx = __riscv_vfirst_m_b8(v_match, vl);
+#else
+#error "MCA_LMUL1, MCA_LMUL2, MCA_LMUL4 must be defined"
+#endif
+            if (match_idx >= 0) {
+              accum_ptr[m_pos - M.Rst[i]] += a_val * B.Val[b_pos + match_idx];
+              b_pos += match_idx + 1;
+              m_pos++;
+            }
+            else {
+              if (M.Col[m_pos] > B.Col[b_pos + vl - 1])
+                b_pos += vl;
+              else 
+                m_pos++;              
+            }
+          }
+        }
+      }
+
+      memcpy(C.Val + C.Rst[i], accum.values, m_row_len * sizeof(T));
+      memset(accum.values, 0, m_row_len * sizeof(T));
+    }
+  }
+#else
+  std::cerr << "No RVV build for vectorization!\n";
+  _mspgemm_mca_parallel_scalar(A, B, M, C);
 #endif
 }
 

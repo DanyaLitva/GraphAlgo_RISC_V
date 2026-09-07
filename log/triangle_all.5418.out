@@ -1,0 +1,24 @@
+echo && echo && echo triangle test on main graphs && echo graph,mca_lmul1,mca_scalar,msa_scalar && \
+for g in road_central in-2004 patents Freescale2 memchip mac_econ_fwd500 webbase-1M amazon0312 amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk; do \
+	./build/triangle_test ./graphs/$g.bin log.txt 3; \
+done
+
+
+triangle test on main graphs
+graph,mca_lmul1,mca_scalar,msa_scalar
+road_central,357,375,627
+in-2004,488,483,138
+patents,569,604,1218
+Freescale2,179,191,142
+memchip,64,65,70
+mac_econ_fwd500,4,5,3
+webbase-1M,11,11,14
+amazon0312,49,52,62
+amazon0601,52,54,61
+ecology1,12,11,12
+raefsky3,24,17,5
+G3_circuit,38,41,43
+netherlands_osm,40,40,48
+web-Stanford,25,30,38
+web-Google,79,86,116
+pwtk,159,128,51

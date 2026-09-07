@@ -1,0 +1,18 @@
+echo && echo && echo k_truss with k = 3 on main graphs && echo graph,mca_lmul1,mca_scalar,msa_scalar && \
+for g in memchip amazon0312 amazon0601 patents webbase-1M road_central pwtk web-Stanford web-Google Freescale2; do \
+	./build/k_truss_test ./graphs/$g.bin log.txt 3; \
+done
+
+
+k_truss with k = 3 on main graphs
+graph,mca_lmul1,mca_scalar,msa_scalar
+memchip,463,503,427
+amazon0312,736,749,717
+amazon0601,828,842,798
+patents,830,869,1519
+webbase-1M,750,1941,351
+road_central,1269,1404,1975
+pwtk,1414,1553,363
+web-Stanford,2796,3383,3271
+web-Google,6199,6741,7867
+Freescale2,4530,11659,20340

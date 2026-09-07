@@ -1,0 +1,24 @@
+echo && echo && echo mxm test on main graphs && echo graph,mca_lmul1,mca_scalar,msa_scalar && \
+for g in road_central in-2004 patents Freescale2 memchip mac_econ_fwd500 webbase-1M amazon0312 amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk; do \
+	./build/mxm_test ./graphs/$g.bin log.txt 3; \
+done
+
+
+mxm test on main graphs
+graph,mca_lmul1,mca_scalar,msa_scalar
+road_central,706,877,1398
+in-2004,2069,2026,401
+patents,505,536,1130
+Freescale2,873,3019,5601
+memchip,104,118,99
+mac_econ_fwd500,10,14,6
+webbase-1M,53,428,31
+amazon0312,101,114,123
+amazon0601,112,114,117
+ecology1,28,25,21
+raefsky3,117,115,20
+G3_circuit,46,42,44
+netherlands_osm,40,41,49
+web-Stanford,144,187,189
+web-Google,327,341,501
+pwtk,701,718,126

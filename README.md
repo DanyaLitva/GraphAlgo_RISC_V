@@ -1,17 +1,25 @@
+Актуальная векторизованная версия MCA: https://github.com/DanyaLitva/GraphAlgo_RISC_V/blob/4ab5fd3fa08867a5d37b09920a063010873c18c4/include/matrix_la.h#L769
+
+Инструкция для сборки:  
+> make - стандартная сборка  
+> make rvv - RISC-V сборка с MCA_LMUL=1 (кросскомпиляция)  
+> make rvv-native - RISC-V сборка с MCA_LMUL=1 на RISC-V узле  
+> make rvv|rvv-native MCA_LMUL=1|2|4 - RISC-V сборка с MCA_LMUL=1,2,4  
+
 Инструкция для запуска:
-> // argv[1] - путь к матрице  
-// argv[2] - путь к файлу, куда запишется лог  
-// argv[3] - режим запуска (tobinary - конвертация из .mtx в .bin / launch - запуск алгоритма)    
-// в случае 'launch':  
-//   argv[4] - запускаемый алгоритм (triangle / k-truss / mxm / bc)  
-//   argv[5] - последовательный / параллельный запуск (seq / par)  
-//   argv[6] - скалярное / rvv умножение (vec / scal)   
-//   в случае 'argv[4] == bc':  
-//     argv[7] - batch size (количество стартовых вершин, которые обрабатываем в алгоритме)  
-//   в случае 'argv[4] == triangle' / 'k-truss' / 'mxm':  
-//     argv[7] - вид алгоритма умножения матриц (naive / msa / mca / heap)  
-//     также в случае 'argv[4] == k-truss':  
-//       argv[8] - параметр 'k' в k-truss  
+> argv[1] - путь к матрице  
+> argv[2] - путь к файлу, куда запишется лог  
+> argv[3] - режим запуска (tobinary - конвертация из .mtx в .bin / launch - запуск алгоритма)    
+> в случае 'launch':  
+>   argv[4] - запускаемый алгоритм (triangle / k-truss / mxm / bc)  
+>   argv[5] - последовательный / параллельный запуск (seq / par)  
+>   argv[6] - скалярное / rvv умножение (scal / vec)   
+>   в случае 'argv[4] == bc':  
+>     argv[7] - batch size (количество стартовых вершин, которые обрабатываем в алгоритме)  
+>   в случае 'argv[4] == triangle' / 'k-truss' / 'mxm':  
+>     argv[7] - вид алгоритма умножения матриц (naive / msa / mca / heap)  
+>     также в случае 'argv[4] == k-truss':  
+>       argv[8] - параметр 'k' в k-truss  
 
 Пример запуска:
 > ./build/grAlgo ./graphs/G43.mtx log.txt launch mxm par vec mca
