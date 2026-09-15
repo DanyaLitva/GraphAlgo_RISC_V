@@ -1,4 +1,4 @@
-Актуальная векторизованная версия MCA: https://github.com/DanyaLitva/GraphAlgo_RISC_V/blob/4ab5fd3fa08867a5d37b09920a063010873c18c4/include/matrix_la.h#L769
+Актуальная векторизованная версия MCA: https://github.com/DanyaLitva/GraphAlgo_RISC_V/blob/baba3b25fa9aa461e3cfd04b8d299ca4bcd6aee5/include/matrix_la.h#L769
 
 Тестовые матрицы: https://drive.google.com/file/d/1IGwGVefNt90q9l977yTW3p0unQdssD_o/view?usp=sharing  
 Их стоит поместить в папку graphs, чтобы работали тесты make mxm_all_test и остальные тесты из Makefile
