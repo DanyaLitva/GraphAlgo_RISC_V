@@ -793,9 +793,9 @@ void _mspgemm_mca_parallel_vectorized(const sparseMtx<T>& A, const sparseMtx<T>&
     T* accum_ptr = accum.values;
 #pragma omp for schedule(dynamic, 32)
     for (size_t i = 0; i < A_m; ++i) {
-      int m_row_len = M_Rst[i + 1] - M_Rst[i];
       int m_start = M_Rst[i];
       int m_max = M_Rst[i + 1];
+      int m_row_len = m_max - m_start;
 
       int A_Rst_end = A_Rst[i + 1];
       for (int t = A_Rst[i]; t < A_Rst_end; ++t) {
