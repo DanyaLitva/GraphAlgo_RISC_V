@@ -9,7 +9,7 @@
 #include <sstream>
 #include <functional>
 #include <climits>
-#define COUNT_REPEAT 5
+#define COUNT_REPEAT 10
 using namespace std;
 
 // ./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 5
@@ -60,8 +60,6 @@ GraphInfo get_graph_info(int argc, const char *argv[]) {
     return info;
 }
 
-int rvv_test_lmul = 1;
-
 extern std::chrono::time_point<std::chrono::steady_clock> start_test, finish_test;
 
 int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const char *argv[]) {
@@ -79,7 +77,6 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     
     std::chrono::time_point<std::chrono::steady_clock> start, finish;
     min_time = LLONG_MAX;
-    rvv_test_lmul = 1;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
       mspgemm_mca<int>(true, true, TestMtx, TestMtx, TestMtx, MxmResult);
@@ -89,30 +86,6 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     }    
     
     cout <<  min_time << ",";
-
-
-    // min_time = LLONG_MAX;
-    // rvv_test_lmul = 2;
-    // for(size_t i = 0; i < COUNT_REPEAT; ++i){
-    //   triangle_counting_test(TestMtx, mspgemm_mca<int>, true, true);
-    //   time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
-    //   if(time<min_time) min_time = time;
-    // }    
-    
-    // cout << min_time << ",";
-
-
-
-    // min_time = LLONG_MAX;
-    // rvv_test_lmul = 4;
-    // for(size_t i = 0; i < COUNT_REPEAT; ++i){
-    //   triangle_counting_test(TestMtx, mspgemm_mca<int>, true, true);
-    //   time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
-    //   if(time<min_time) min_time = time;
-    // }    
-    
-    // cout <<  min_time << ",";
-
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
@@ -144,6 +117,28 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
     }    
+    
+    cout <<  min_time << ",";
+
+    min_time = LLONG_MAX;
+    for(size_t i = 0; i < COUNT_REPEAT; ++i){
+      start = chrono::steady_clock::now();
+      mspgemm_heap<int>(true, true, TestMtx, TestMtx, TestMtx, MxmResult);
+      finish = chrono::steady_clock::now();
+      time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
+      if(time<min_time) min_time = time;
+    }    
+
+        cout <<  min_time << ",";
+
+    min_time = LLONG_MAX;
+    for(size_t i = 0; i < COUNT_REPEAT; ++i){
+      start = chrono::steady_clock::now();
+      mspgemm_heap<int>(true, false, TestMtx, TestMtx, TestMtx, MxmResult);
+      finish = chrono::steady_clock::now();
+      time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
+      if(time<min_time) min_time = time;
+    }   
     
     cout << min_time << endl;
 

@@ -11,6 +11,9 @@
 #include <string>
 #include <algorithm>
 #include <chrono>
+#include <vector>
+#include <sstream>
+#include <stdexcept>
 #include "mmio.h"
 
 template <typename ValT>
@@ -20,7 +23,7 @@ public:
     size_t n = 0;
     size_t nz = 0;
     size_t capacity = 0;
-    MM_typecode matcode;
+    MM_typecode matcode{};
     int* Rst = nullptr;
     int* Col = nullptr;
     ValT* Val = nullptr;
@@ -59,25 +62,43 @@ public:
         capacity = nz;
     }
 
-    sparseMtx(const sparseMtx &copy): m(copy.m), n(copy.n), nz(copy.nz), capacity(copy.capacity) {
+    sparseMtx(const sparseMtx &copy)
+        : m(copy.m), n(copy.n), nz(copy.nz), capacity(copy.capacity),
+          Rst(nullptr), Col(nullptr), Val(nullptr) {
         for (int i = 0; i < 4; ++i)
             matcode[i] = copy.matcode[i];
-        Col = new int[nz];
-        memcpy(Col, copy.Col, nz*sizeof(int));
-        Rst = new int[m+1];
-        memcpy(Rst, copy.Rst, (m+1)*sizeof(int));
-        if (copy.Val != nullptr) {
+
+        Rst = new int[m + 1];
+        if (m + 1 > 0)
+            std::memcpy(Rst, copy.Rst, (m + 1) * sizeof(int));
+
+        if (nz > 0) {
+            Col = new int[nz];
+            if (copy.Col != nullptr)
+                std::memcpy(Col, copy.Col, nz * sizeof(int));
+        }
+
+        if (copy.Val != nullptr && nz > 0) {
             Val = new ValT[nz];
-            memcpy(Val, copy.Val, nz*sizeof(ValT));
+            std::memcpy(Val, copy.Val, nz * sizeof(ValT));
         }
     }
 
-    sparseMtx(sparseMtx &&mov): m(mov.m), n(mov.n), nz(mov.nz), capacity(mov.capacity) {
+    sparseMtx(sparseMtx &&mov) noexcept
+        : m(mov.m), n(mov.n), nz(mov.nz), capacity(mov.capacity),
+          matcode{}, Rst(mov.Rst), Col(mov.Col), Val(mov.Val) {
         for (int i = 0; i < 4; ++i)
             matcode[i] = mov.matcode[i];
-        std::swap(Col, mov.Col);
-        std::swap(Rst, mov.Rst);
-        std::swap(Val, mov.Val);
+
+        mov.m = 0;
+        mov.n = 0;
+        mov.nz = 0;
+        mov.capacity = 0;
+        mov.Rst = nullptr;
+        mov.Col = nullptr;
+        mov.Val = nullptr;
+        for (int i = 0; i < 4; ++i)
+            mov.matcode[i] = 0;
     }
 
     ~sparseMtx() {
@@ -148,8 +169,24 @@ public:
             Val = new ValT[copy.nz];
             capacity = copy.nz;
         }
-        memcpy(Col, copy.Col, copy.nz * sizeof(int));
-        memcpy(Val, copy.Val, copy.nz * sizeof(ValT));
+        if (copy.nz > 0) {
+            if (Col == nullptr)
+                Col = new int[copy.nz];
+            std::memcpy(Col, copy.Col, copy.nz * sizeof(int));
+            if (copy.Val != nullptr) {
+                if (Val == nullptr)
+                    Val = new ValT[copy.nz];
+                std::memcpy(Val, copy.Val, copy.nz * sizeof(ValT));
+            } else {
+                delete[] Val;
+                Val = nullptr;
+            }
+        } else {
+            delete[] Col;
+            delete[] Val;
+            Col = nullptr;
+            Val = nullptr;
+        }
 
         m = copy.m;
         n  = copy.n;
@@ -158,35 +195,53 @@ public:
         return *this;
     }
 
-    sparseMtx& operator=(sparseMtx &&mov) {
+    sparseMtx& operator=(sparseMtx &&mov) noexcept {
         if (this == &mov)
             return *this;
 
+        delete[] Rst;
+        delete[] Col;
+        delete[] Val;
+
         m = mov.m;
         n = mov.n;
-        for (int i = 0; i < 4; ++i)
-            matcode[i] = mov.matcode[i];
-
-        std::swap(Col, mov.Col);
-        std::swap(Rst, mov.Rst);
-        std::swap(Val, mov.Val);
-
-        m  = mov.m;
-        n  = mov.n;
         nz = mov.nz;
         capacity = mov.capacity;
+        for (int i = 0; i < 4; ++i)
+            matcode[i] = mov.matcode[i];
+        Rst = mov.Rst;
+        Col = mov.Col;
+        Val = mov.Val;
+
+        mov.m = 0;
+        mov.n = 0;
+        mov.nz = 0;
+        mov.capacity = 0;
+        mov.Rst = nullptr;
+        mov.Col = nullptr;
+        mov.Val = nullptr;
+        for (int i = 0; i < 4; ++i)
+            mov.matcode[i] = 0;
 
         return *this;
     }
 
     sparseMtx extractRows(size_t begin, size_t end) const {
-        sparseMtx result(end - begin, n, Rst[end] - Rst[begin]);
+        if (begin > end || end > m)
+            throw std::out_of_range("invalid row range in sparseMtx::extractRows");
+
+        const size_t row_nz = static_cast<size_t>(Rst[end] - Rst[begin]);
+        sparseMtx result(end - begin, n, row_nz);
 
         for (size_t i = 0; i <= end - begin; ++i)
             result.Rst[i] = Rst[i + begin] - Rst[begin];
-        memcpy(result.Col, Col + Rst[begin], (Rst[end] - Rst[begin]) * sizeof(int));
-        memcpy(result.Val, Val + Rst[begin], (Rst[end] - Rst[begin]) * sizeof(ValT));
-        memcpy(result.matcode, matcode, sizeof(MM_typecode));
+
+        if (row_nz > 0) {
+            std::memcpy(result.Col, Col + Rst[begin], row_nz * sizeof(int));
+            if (Val != nullptr)
+                std::memcpy(result.Val, Val + Rst[begin], row_nz * sizeof(ValT));
+        }
+        std::memcpy(result.matcode, matcode, sizeof(MM_typecode));
 
         return result;
     }
@@ -406,8 +461,9 @@ private:
         /* Reading file to write it's content in crs */
         if (mm_is_pattern(matcode)) {
             for (size_t i = 0; i < nz; ++i) {
-                Col[last_el[row_a[i]]++] = col_a[i];
-                Val[i] = 1;
+                const int pos = last_el[row_a[i]]++;
+                Col[pos] = col_a[i];
+                Val[pos] = ValT(1);
             }
         } else {
             for (size_t i = 0; i < nz; ++i) {
@@ -431,6 +487,12 @@ private:
             return -1;
 
         ifstream >> m >> nz >> matcode;
+        if (!ifstream) {
+            std::ios_base::sync_with_stdio(true);
+            return -2;
+        }
+        // Legacy CRS format stores only m and nz, so it is necessarily square.
+        n = m;
         Col = new int[nz];
         Val = new ValT[nz];
         Rst = new int[m+1];
@@ -448,44 +510,55 @@ private:
 
     int read_bin_to_crs(const char *filename) {
         FILE *fp = fopen(filename, "rb");
-        if (fp == NULL)
+        if (fp == nullptr)
             return -1;
 
-        if (fread(matcode, 1, 1, fp) != 1)          return -2;
-        if (fread(matcode + 1, 1, 1, fp) != 1)      return -2;
-        if (fread(matcode + 2, 1, 1, fp) != 1)      return -2;
-        if (fread(matcode + 3, 1, 1, fp) != 1)      return -2;
-        if (fread(&m, sizeof(size_t), 1, fp) != 1)  return -2;
-        if (fread(&n, sizeof(size_t), 1, fp) != 1)  return -2;
-        if (fread(&nz, sizeof(size_t), 1, fp) != 1) return -2;
+        auto fail = [&](int code) {
+            fclose(fp);
+            return code;
+        };
 
+        MM_typecode new_matcode{};
+        size_t new_m = 0, new_n = 0, new_nz = 0;
 
-        Rst = new int[m+1];
-        Col = new int[nz];
-        Val = new ValT[nz];
-        int  *RstTmp = new int[m+1];
-        int  *ColTmp = new int[nz];
-        ValT *ValTmp = new ValT[nz];
-        if (fread(RstTmp, sizeof(int), m+1, fp) != m+1) return -3;
-        if (fread(ColTmp, sizeof(int), nz, fp)  != nz ) return -3;
-        if (fread(ValTmp, sizeof(ValT), nz, fp) != nz ) return -3;
+        if (fread(new_matcode, 1, 4, fp) != 4)
+            return fail(-2);
+        if (fread(&new_m, sizeof(size_t), 1, fp) != 1 ||
+            fread(&new_n, sizeof(size_t), 1, fp) != 1 ||
+            fread(&new_nz, sizeof(size_t), 1, fp) != 1)
+            return fail(-2);
 
-        // write with parallel for into main arrays to get along with NUMA
-    #pragma omp parallel for
-        for (size_t i = 0; i < m; ++i) {
-            Rst[i] = RstTmp[i];
-            Rst[i+1] = RstTmp[i+1];
-        }
-    #pragma omp parallel for
-        for (size_t i = 0; i < nz; ++i) {
-            Col[i] = ColTmp[i];
-            Val[i] = ValTmp[i];
-        }
+        std::vector<int> rst(new_m + 1);
+        std::vector<int> col(new_nz);
+        std::vector<ValT> val(new_nz);
+
+        if (fread(rst.data(), sizeof(int), new_m + 1, fp) != new_m + 1)
+            return fail(-3);
+        if (new_nz > 0 && fread(col.data(), sizeof(int), new_nz, fp) != new_nz)
+            return fail(-3);
+        if (new_nz > 0 && fread(val.data(), sizeof(ValT), new_nz, fp) != new_nz)
+            return fail(-3);
 
         fclose(fp);
-        delete[] RstTmp;
-        delete[] ColTmp;
-        delete[] ValTmp;
+
+        if (rst.back() != static_cast<int>(new_nz))
+            return -4;
+
+        m = new_m;
+        n = new_n;
+        nz = new_nz;
+        capacity = new_nz;
+        std::memcpy(matcode, new_matcode, sizeof(MM_typecode));
+
+        Rst = new int[m + 1];
+        if (m + 1 > 0)
+            std::memcpy(Rst, rst.data(), (m + 1) * sizeof(int));
+        if (nz > 0) {
+            Col = new int[nz];
+            Val = new ValT[nz];
+            std::memcpy(Col, col.data(), nz * sizeof(int));
+            std::memcpy(Val, val.data(), nz * sizeof(ValT));
+        }
         return 0;
     }
 
@@ -503,6 +576,7 @@ private:
         Rst[0] = 0;
 
         std::string s;
+        std::getline(ifstr, s); // consume the remainder of the header line
         size_t j = 0;
         for (size_t i = 0; i < m; ++i) {
             std::getline(ifstr, s);
@@ -588,9 +662,11 @@ public:
         Val = new ValT[capacity];
         memcpy(Val, copy.Val, capacity * sizeof(ValT));
     }
-    denseMtx(denseMtx &&mov) : m(mov.m), n(mov.n) {
-        capacity = m*n;
-        Val = mov.Val;
+    denseMtx(denseMtx &&mov) noexcept
+        : m(mov.m), n(mov.n), capacity(mov.capacity), Val(mov.Val) {
+        mov.m = 0;
+        mov.n = 0;
+        mov.capacity = 0;
         mov.Val = nullptr;
     }
     template <typename ValT2>
@@ -606,7 +682,7 @@ public:
         }
     }
     denseMtx& operator=(const denseMtx &copy) {
-        if (this != &copy)
+        if (this == &copy)
             return *this;
 
         m = copy.m;
@@ -617,7 +693,8 @@ public:
             capacity = m*n;
             Val = new ValT[capacity];
         }
-        memcpy(Val, copy.Val, m*n*sizeof(ValT));
+        if (m * n > 0)
+            std::memcpy(Val, copy.Val, m*n*sizeof(ValT));
 
         return *this;
     }
@@ -641,13 +718,19 @@ public:
         }
         return *this;
     }
-    denseMtx& operator=(denseMtx &&mov) {
+    denseMtx& operator=(denseMtx &&mov) noexcept {
+        if (this == &mov)
+            return *this;
+
+        delete[] Val;
         m = mov.m;
         n = mov.n;
         capacity = mov.capacity;
-        if (Val != nullptr)
-            delete[] Val;
         Val = mov.Val;
+
+        mov.m = 0;
+        mov.n = 0;
+        mov.capacity = 0;
         mov.Val = nullptr;
 
         return *this;
@@ -706,6 +789,7 @@ sparseMtx<int> build_adjacency_matrix(const sparseMtx<T> &Gr) {
     Res.Rst = new int[Gr.m + 1];
     Res.Col = new int[Gr.nz];
     Res.Val = new int[Gr.nz];
+    Res.capacity = Gr.nz;
 
     std::memcpy(Res.Col, Gr.Col, Gr.nz*sizeof(int));
     std::memcpy(Res.Rst, Gr.Rst, (Gr.m + 1)*sizeof(int));
@@ -772,7 +856,8 @@ sparseMtx<T> extract_lower_triangle(const sparseMtx<T> &Gr) {
 
     Res.nz = Res.Rst[Res.m];
     Res.Col = new int[Res.nz];
-    Res.Val = new   T[Res.nz];
+    Res.Val = new T[Res.nz];
+    Res.capacity = Res.nz;
 
     for (size_t i = 0; i < Gr.m; ++i) {
         size_t row_len = Res.Rst[i+1] - Res.Rst[i];
@@ -801,7 +886,8 @@ sparseMtx<T> extract_upper_triangle(const sparseMtx<T> &Gr) {
 
     Res.nz = Res.Rst[Res.m];
     Res.Col = new int[Res.nz];
-    Res.Val = new   T[Res.nz];
+    Res.Val = new T[Res.nz];
+    Res.capacity = Res.nz;
 
     for (size_t i = 0; i < Gr.m; ++i) {
         int row_len = Res.Rst[i+1] - Res.Rst[i];

@@ -35,6 +35,14 @@ clean:
 
 rebuild: clean release
 
+test:
+	$(MAKE) && \
+	echo && echo && echo run tests: && \
+	echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar,heap_rvv,heap_scalar && \
+	./build/mxm_test ./graphs/netherlands_osm.mtx log.txt && \
+	./build/triangle_test ./graphs/netherlands_osm.mtx log.txt && \
+	./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3
+
 GRAPHS := memchip amazon0312 amazon0601 patents webbase-1M road_central pwtk web-Stanford web-Google Freescale2
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm mac_econ_fwd500
 ALL_GRAPHS := road_central in-2004 patents Freescale2 memchip mac_econ_fwd500 webbase-1M amazon0312 amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk
@@ -60,27 +68,27 @@ k_truss_all_test:
 triangle_test:
 	echo && echo && echo triangle test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(GRAPHS); do \
-		./build/triangle_test ./graphs/$$g.bin log.txt $(k); \
+		./build/triangle_test ./graphs/$$g.bin log.txt; \
 	done
 
 
 triangle_all_test:
 	echo && echo && echo triangle test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(ALL_GRAPHS); do \
-		./build/triangle_test ./graphs/$$g.bin log.txt $(k); \
+		./build/triangle_test ./graphs/$$g.bin log.txt; \
 	done
 
 mxm_test:
 	echo && echo && echo mxm test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(GRAPHS); do \
-		./build/mxm_test ./graphs/$$g.bin log.txt $(k); \
+		./build/mxm_test ./graphs/$$g.bin log.txt; \
 	done
 
 
 mxm_all_test:
 	echo && echo && echo mxm test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(ALL_GRAPHS); do \
-		./build/mxm_test ./graphs/$$g.bin log.txt $(k); \
+		./build/mxm_test ./graphs/$$g.bin log.txt; \
 	done
 
 to_bin:

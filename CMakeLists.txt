@@ -16,6 +16,7 @@ endif()
 
 add_library(grAlgoLib STATIC
     include/matrix.h
+    include/matrix_la_scalar.h
     include/matrix_la.h
     include/graph_algorithms.h
     include/matrix_utils.h
@@ -41,10 +42,6 @@ if(WITH_RVV)
     endif()
 endif()
 
-add_executable(grAlgo
-    src/main.cpp
-)
-
 add_executable(k_truss_test
     src/k_truss_test.cpp
 )
@@ -57,7 +54,6 @@ add_executable(mxm_test
     src/mxm_test.cpp
 )
 
-target_link_libraries(grAlgo PRIVATE grAlgoLib)
 target_link_libraries(k_truss_test PRIVATE grAlgoLib)
 target_link_libraries(triangle_test PRIVATE grAlgoLib)
 target_link_libraries(mxm_test PRIVATE grAlgoLib)
