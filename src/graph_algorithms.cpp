@@ -104,8 +104,11 @@ sparseMtx<int> k_truss(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int> mat
         memcpy(Tmp.Rst, tmp_Rst, (n+1)*sizeof(int));
         Tmp.nz = Tmp.Rst[n];
 
-        // check if the number of edges has changed
-        if (Tmp.nz == C.nz) {
+        const bool samePattern =
+            (Tmp.m == C.m) && (Tmp.n == C.n) && (Tmp.nz == C.nz) &&
+            std::memcmp(Tmp.Rst, C.Rst, (n + 1) * sizeof(int)) == 0 &&
+            (Tmp.nz == 0 || std::memcmp(Tmp.Col, C.Col, Tmp.nz * sizeof(int)) == 0);
+        if (samePattern) {
             totalIterationNum = ++t;
             break;
         }
@@ -483,8 +486,11 @@ sparseMtx<int> k_truss_test(const sparseMtx<int> &A, int k, mspgemmAlgorithm<int
         memcpy(Tmp.Rst, tmp_Rst, (n+1)*sizeof(int));
         Tmp.nz = Tmp.Rst[n];
 
-        // check if the number of edges has changed
-        if (Tmp.nz == C.nz) {
+        const bool samePattern =
+            (Tmp.m == C.m) && (Tmp.n == C.n) && (Tmp.nz == C.nz) &&
+            std::memcmp(Tmp.Rst, C.Rst, (n + 1) * sizeof(int)) == 0 &&
+            (Tmp.nz == 0 || std::memcmp(Tmp.Col, C.Col, Tmp.nz * sizeof(int)) == 0);
+        if (samePattern) {
             totalIterationNum = ++t;
             break;
         }

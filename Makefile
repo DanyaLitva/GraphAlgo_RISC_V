@@ -1,5 +1,6 @@
 default: release
 MCA_LMUL:=1
+HEAP_LMUL:=1
 BUILD_DIR := build
 k:=3
 
@@ -22,65 +23,73 @@ debug:
 	cmake --build . -j
 
 rvv:
-	$(MAKE) CMAKE_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../toolchains/riscv64-1p0-gcc.toolchain.cmake -DWITH_RVV=ON -DMCA_LMUL=$(MCA_LMUL)"
+	$(MAKE) CMAKE_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../toolchains/riscv64-1p0-gcc.toolchain.cmake -DWITH_RVV=ON -DMCA_LMUL=$(MCA_LMUL) -DHEAP_LMUL=$(HEAP_LMUL)"
 
 rvv-f16:
-	$(MAKE) CMAKE_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../toolchains/riscv64-1p0-gcc-f16.toolchain.cmake -DWITH_RVV=ON -DMCA_LMUL=$(MCA_LMUL)"
+	$(MAKE) CMAKE_OPTIONS="-DCMAKE_TOOLCHAIN_FILE=../toolchains/riscv64-1p0-gcc-f16.toolchain.cmake -DWITH_RVV=ON -DMCA_LMUL=$(MCA_LMUL) -DHEAP_LMUL=$(HEAP_LMUL)"
 
 rvv-native: clean
-	$(MAKE) CMAKE_OPTIONS="-DWITH_RVV=ON -DMCA_LMUL=$(MCA_LMUL)"
+	$(MAKE) CMAKE_OPTIONS="-DWITH_RVV=ON -DMCA_LMUL=$(MCA_LMUL) -DHEAP_LMUL=$(HEAP_LMUL)"
 
 clean:
 	rm -rf $(BUILD_DIR)
 
 rebuild: clean release
 
+test:
+	$(MAKE) && \
+	echo && echo && echo run tests: && \
+	echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar,heap_rvv,heap_scalar && \
+	./build/mxm_test ./graphs/netherlands_osm.mtx log.txt && \
+	./build/triangle_test ./graphs/netherlands_osm.mtx log.txt && \
+	./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3
+
 GRAPHS := memchip amazon0312 amazon0601 patents webbase-1M road_central pwtk web-Stanford web-Google Freescale2
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm mac_econ_fwd500
 ALL_GRAPHS := road_central in-2004 patents Freescale2 memchip mac_econ_fwd500 webbase-1M amazon0312 amazon0601 ecology1 raefsky3 G3_circuit netherlands_osm web-Stanford web-Google pwtk
 
 k_truss_test:
-	echo && echo && echo k_truss with k = $(k) on main graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo k_truss with k = $(k) on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(GRAPHS); do \
 		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
 	done
 
 k_truss_small_test:
-	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(SMALL_GRAPHS); do \
 		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
 	done
 
 k_truss_all_test:
-	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo k_truss with k = $(k) on small graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(ALL_GRAPHS); do \
 		./build/k_truss_test ./graphs/$$g.bin log.txt $(k); \
 	done
 
 triangle_test:
-	echo && echo && echo triangle test on main graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo triangle test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(GRAPHS); do \
-		./build/triangle_test ./graphs/$$g.bin log.txt $(k); \
+		./build/triangle_test ./graphs/$$g.bin log.txt; \
 	done
 
 
 triangle_all_test:
-	echo && echo && echo triangle test on main graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo triangle test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(ALL_GRAPHS); do \
-		./build/triangle_test ./graphs/$$g.bin log.txt $(k); \
+		./build/triangle_test ./graphs/$$g.bin log.txt; \
 	done
 
 mxm_test:
-	echo && echo && echo mxm test on main graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo mxm test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(GRAPHS); do \
-		./build/mxm_test ./graphs/$$g.bin log.txt $(k); \
+		./build/mxm_test ./graphs/$$g.bin log.txt; \
 	done
 
 
 mxm_all_test:
-	echo && echo && echo mxm test on main graphs && echo graph,mca_rvv,mca_scalar,msa_scalar && \
+	echo && echo && echo mxm test on main graphs && echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar && \
 	for g in $(ALL_GRAPHS); do \
-		./build/mxm_test ./graphs/$$g.bin log.txt $(k); \
+		./build/mxm_test ./graphs/$$g.bin log.txt; \
 	done
 
 to_bin:
