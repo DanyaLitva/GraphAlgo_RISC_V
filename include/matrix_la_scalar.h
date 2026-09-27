@@ -808,25 +808,6 @@ void mspgemm_msa_cmask(bool isParallel, bool isVectorization, const sparseMtx<T>
     _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
 }
 
-template <typename T>
-struct heap_iterator {
-  int b_pos;
-  int b_max_pos;
-  int b_col;
-  T   val;
-
-  heap_iterator() {}
-  heap_iterator(int x, int y, int z, const T& val) :
-    b_pos(x), b_max_pos(y), b_col(z), val(val) {
-  }
-  heap_iterator(const heap_iterator& it) :
-    b_pos(it.b_pos), b_max_pos(it.b_max_pos), b_col(it.b_col), val(it.val) {
-  }
-  bool operator<(const heap_iterator<T>& other) const {
-    return b_col > other.b_col;
-  }
-};
-
 // Naive sequential
 template <typename T>
 void _mspgemm_naive_sequential(const sparseMtx<T>& A, const sparseMtx<T>& B,

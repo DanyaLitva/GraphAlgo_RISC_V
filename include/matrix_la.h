@@ -32,6 +32,23 @@ struct MCA {
   }
 };
 
+template <typename T>
+struct heap_iterator {
+  int b_pos;
+  int b_max_pos;
+  int b_col;
+  T   val;
+
+  heap_iterator() {}
+  heap_iterator(int x, int y, int z, const T& val) :
+    b_pos(x), b_max_pos(y), b_col(z), val(val) {
+  }
+  
+  bool operator<(const heap_iterator<T>& other) const {
+    return b_col > other.b_col;
+  }
+};
+
 // MCA
 template<typename T, typename U>
 void _mspgemm_mca_sequential(const sparseMtx<T>& A,
