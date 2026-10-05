@@ -34,6 +34,10 @@ target_include_directories(grAlgoLib PUBLIC include)
 
 target_link_libraries(grAlgoLib PUBLIC OpenMP::OpenMP_CXX)
 
+if(MSVC)
+    target_compile_options(grAlgoLib PUBLIC /openmp:llvm)
+    target_compile_options(grAlgoLib PUBLIC /openmp:experimental)
+endif()
 
 #-DMCA_LMUL=1,2,4
 if(WITH_RVV)
