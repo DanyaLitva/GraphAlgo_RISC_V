@@ -11,4 +11,12 @@
 > make rvv-native - RISC-V сборка с MCA_LMUL=1 на RISC-V узле  
 > make rvv|rvv-native MCA_LMUL=1|2|4 - RISC-V сборка с MCA_LMUL=1,2,4  
 
-Инструкция для запуска: TODO
+Инструкция для запуска:
+> make test - собрать проект и запустить тесты mxm, triangle и k-truss на netherlands_osm.mtx  
+> ./build/mxm_test ./graphs/netherlands_osm.mtx log.txt - запустить тест умножения матриц  
+> ./build/triangle_test ./graphs/netherlands_osm.mtx log.txt - запустить тест подсчёта треугольников  
+> ./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3 - запустить тест k-truss (последний аргумент — значение k)  
+> make mxm_test|triangle_test|k_truss_test - запустить тест на SMALL_GRAPHS из Makefile  
+> make mxm_all_test|triangle_all_test|k_truss_all_test - запустить тест на ALL_GRAPHS из Makefile
+
+*log.txt пока что не используется.
