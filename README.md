@@ -13,6 +13,7 @@
 
 Инструкция для запуска:
 > make test - собрать проект, запустить проверки корректности и затем бенчмарки mxm, triangle и k-truss на netherlands_osm.mtx
+> make test_rvv - собрать с RVV на RISC-V узле и запустить проверки корректности, включая векторизованные режимы
 > ./build/mxm_test ./graphs/netherlands_osm.mtx log.txt - запустить тест умножения матриц  
 > ./build/triangle_test ./graphs/netherlands_osm.mtx log.txt - запустить тест подсчёта треугольников  
 > ./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3 - запустить тест k-truss (последний аргумент — значение k)  

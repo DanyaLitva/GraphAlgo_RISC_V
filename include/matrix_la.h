@@ -772,43 +772,40 @@ inline void _mspgemm_heap_parallel_vectorized(const sparseMtx<int>& A, const spa
 
       const int K = row_end - row_start;
       heap_vec.clear();
-      bool all_b_rows_nonempty = true;
-      for (int j = row_start; j < row_end; ++j) {
-        const int k = A_Col[j];
-        if (B_Rst[k] == B_Rst[k + 1]) {
-          all_b_rows_nonempty = false;
+      heap_vec.resize(K);
+      heap_iterator<int>* buf = heap_vec.data();
+      int* buf_int = reinterpret_cast<int*>(buf);
+      int j = 0;
+      bool has_empty_b_row = false;
+      while (j < K) {
+        size_t vl = __riscv_vsetvl_e32m1(static_cast<size_t>(K - j));
+        vint32m1_t v_a_col = __riscv_vle32_v_i32m1(A_Col + row_start + j, vl);
+        vint32m1_t v_a_val = __riscv_vle32_v_i32m1(A_Val + row_start + j, vl);
+
+        vuint32m1_t v_a_col_u = __riscv_vreinterpret_v_i32m1_u32m1(v_a_col);
+        vuint32m1_t v_off_pos = __riscv_vsll_vx_u32m1(v_a_col_u, 2, vl);
+        vuint32m1_t v_off_max = __riscv_vadd_vx_u32m1(v_off_pos, 4, vl);
+
+        vint32m1_t v_b_pos = __riscv_vluxei32_v_i32m1(B_Rst, v_off_pos, vl);
+        vint32m1_t v_b_max = __riscv_vluxei32_v_i32m1(B_Rst, v_off_max, vl);
+        vbool32_t v_empty = __riscv_vmseq_vv_i32m1_b32(v_b_pos, v_b_max, vl);
+        if (__riscv_vfirst_m_b32(v_empty, vl) >= 0) {
+          has_empty_b_row = true;
           break;
         }
+
+        vuint32m1_t v_b_pos_u = __riscv_vreinterpret_v_i32m1_u32m1(v_b_pos);
+        vuint32m1_t v_off_col = __riscv_vsll_vx_u32m1(v_b_pos_u, 2, vl);
+        vint32m1_t v_b_col = __riscv_vluxei32_v_i32m1(B_Col, v_off_col, vl);
+
+        __riscv_vsse32_v_i32m1(buf_int, 16, v_b_pos, vl);
+        __riscv_vsse32_v_i32m1(buf_int + 1, 16, v_b_max, vl);
+        __riscv_vsse32_v_i32m1(buf_int + 2, 16, v_b_col, vl);
+        __riscv_vsse32_v_i32m1(buf_int + 3, 16, v_a_val, vl);
+        j += static_cast<int>(vl);
       }
-
-      if (all_b_rows_nonempty) {
-        heap_vec.resize(K);
-        heap_iterator<int>* buf = heap_vec.data();
-        int* buf_int = reinterpret_cast<int*>(buf);
-        int j = 0;
-        while (j < K) {
-          size_t vl = __riscv_vsetvl_e32m1(static_cast<size_t>(K - j));
-          vint32m1_t v_a_col = __riscv_vle32_v_i32m1(A_Col + row_start + j, vl);
-          vint32m1_t v_a_val = __riscv_vle32_v_i32m1(A_Val + row_start + j, vl);
-
-          vuint32m1_t v_a_col_u = __riscv_vreinterpret_v_i32m1_u32m1(v_a_col);
-          vuint32m1_t v_off_pos = __riscv_vsll_vx_u32m1(v_a_col_u, 2, vl);
-          vuint32m1_t v_off_max = __riscv_vadd_vx_u32m1(v_off_pos, 4, vl);
-
-          vint32m1_t v_b_pos = __riscv_vluxei32_v_i32m1(B_Rst, v_off_pos, vl);
-          vint32m1_t v_b_max = __riscv_vluxei32_v_i32m1(B_Rst, v_off_max, vl);
-
-          vuint32m1_t v_b_pos_u = __riscv_vreinterpret_v_i32m1_u32m1(v_b_pos);
-          vuint32m1_t v_off_col = __riscv_vsll_vx_u32m1(v_b_pos_u, 2, vl);
-          vint32m1_t v_b_col = __riscv_vluxei32_v_i32m1(B_Col, v_off_col, vl);
-
-          __riscv_vsse32_v_i32m1(buf_int, 16, v_b_pos, vl);
-          __riscv_vsse32_v_i32m1(buf_int + 1, 16, v_b_max, vl);
-          __riscv_vsse32_v_i32m1(buf_int + 2, 16, v_b_col, vl);
-          __riscv_vsse32_v_i32m1(buf_int + 3, 16, v_a_val, vl);
-          j += static_cast<int>(vl);
-        }
-      } else {
+      if (has_empty_b_row) {
+        heap_vec.clear();
         for (int j = row_start; j < row_end; ++j) {
           const int k = A_Col[j];
           const int b_pos = B_Rst[k];
@@ -821,7 +818,6 @@ inline void _mspgemm_heap_parallel_vectorized(const sparseMtx<int>& A, const spa
       std::make_heap(heap_vec.begin(), heap_vec.end());
 
       m_pos = mask_start;
-      m_col = M_Col[m_pos];
       m_max_pos = mask_end;
 
       while (!heap_vec.empty()) {
@@ -829,27 +825,27 @@ inline void _mspgemm_heap_parallel_vectorized(const sparseMtx<int>& A, const spa
         std::pop_heap(heap_vec.begin(), heap_vec.end());
         heap_vec.pop_back();
 
-        while (m_pos < m_max_pos && m_col < iter.b_col) {
+        while (m_pos < m_max_pos && M_Col[m_pos] < iter.b_col)
           ++m_pos;
-          if (m_pos < m_max_pos)
-            m_col = M_Col[m_pos];
-        }
         if (m_pos == m_max_pos)
           break;
+        m_col = M_Col[m_pos];
 
         if (m_col == iter.b_col && iter.b_pos < iter.b_max_pos)
           C_Val[m_pos] += iter.val * B_Val[iter.b_pos];
 
         ++iter.b_pos;
-        while (iter.b_pos < iter.b_max_pos && B_Col[iter.b_pos] < m_col)
-          ++iter.b_pos;
-        if (iter.b_pos < iter.b_max_pos) {
+        while (iter.b_pos < iter.b_max_pos) {
           iter.b_col = B_Col[iter.b_pos];
+          if (iter.b_col >= m_col)
+            break;
+          ++iter.b_pos;
+        }
+        if (iter.b_pos < iter.b_max_pos) {
           heap_vec.push_back(iter);
           std::push_heap(heap_vec.begin(), heap_vec.end());
         }
       }
-      heap_vec.clear();
     }
   }
 #else

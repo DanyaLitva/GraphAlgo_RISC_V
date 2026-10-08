@@ -4,7 +4,7 @@ HEAP_LMUL:=1
 BUILD_DIR := build
 k:=3
 
-.PHONY: default release debug rvv rvv-native clean rebuild to_bin test \
+.PHONY: default release debug rvv rvv-native clean rebuild to_bin test test_rvv \
 	k_truss_test k_truss_all_test triangle_test triangle_all_test mxm_test mxm_all_test
 
 release:
@@ -48,6 +48,9 @@ test: release
 	./build/mxm_test ./graphs/netherlands_osm.mtx log.txt && \
 	./build/triangle_test ./graphs/netherlands_osm.mtx log.txt && \
 	./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3
+
+test_rvv: rvv-native
+	cd $(BUILD_DIR) && ctest --output-on-failure
 
 #Performance tests
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm mac_econ_fwd500
