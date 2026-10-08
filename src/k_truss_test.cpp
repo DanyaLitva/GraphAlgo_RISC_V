@@ -81,7 +81,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      k_truss_test(TestMtx, arg_k, mspgemm_mca<int>, true, true);
+      k_truss_test(TestMtx, arg_k, mspgemm_mca<int>, true);
       time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
       if(time<min_time) min_time = time;
     }    
@@ -90,7 +90,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      k_truss_test(TestMtx, arg_k, mspgemm_mca<int>, true, false);
+      k_truss_test(TestMtx, arg_k, mspgemm_mca<int>, false);
       time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
       if(time<min_time) min_time = time;
     }    
@@ -99,7 +99,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      k_truss_test(TestMtx, arg_k, mspgemm_msa<int>, true, true);
+      k_truss_test(TestMtx, arg_k, mspgemm_msa<int>, true);
       time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
       if(time<min_time) min_time = time;
     }    
@@ -108,7 +108,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      k_truss_test(TestMtx, arg_k, mspgemm_msa<int>, true, false);
+      k_truss_test(TestMtx, arg_k, mspgemm_msa<int>, false);
       time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
       if(time<min_time) min_time = time;
     }    
@@ -117,7 +117,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      k_truss_test(TestMtx, arg_k, mspgemm_heap<int>, true, true);
+      k_truss_test(TestMtx, arg_k, mspgemm_heap<int>, true);
       time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
       if(time<min_time) min_time = time;
     }
@@ -126,7 +126,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
 
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
-      k_truss_test(TestMtx, arg_k, mspgemm_heap<int>, true, false);
+      k_truss_test(TestMtx, arg_k, mspgemm_heap<int>, false);
       time = chrono::duration_cast<chrono::milliseconds>(finish_test - start_test).count();
       if(time<min_time) min_time = time;
     }

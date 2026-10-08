@@ -5,6 +5,8 @@ project(graphAlgorithms LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+enable_testing()
+
 find_package(OpenMP REQUIRED)
 
 option(WITH_RVV "Enable RISC-V Vector intrinsics" OFF)
@@ -75,9 +77,21 @@ add_executable(mxm_test
     src/mxm_test.cpp
 )
 
+add_executable(convert_to_bin
+    src/convert_to_bin.cpp
+)
+
+add_executable(algorithm_tests
+    src/algorithm_tests.cpp
+)
+
 target_link_libraries(k_truss_test PRIVATE grAlgoLib)
 target_link_libraries(triangle_test PRIVATE grAlgoLib)
 target_link_libraries(mxm_test PRIVATE grAlgoLib)
+target_link_libraries(convert_to_bin PRIVATE grAlgoLib)
+target_link_libraries(algorithm_tests PRIVATE grAlgoLib)
+
+add_test(NAME algorithm_correctness COMMAND algorithm_tests)
 
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER}")
