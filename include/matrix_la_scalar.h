@@ -35,12 +35,6 @@ sparseMtx<T> transpose(const sparseMtx<T>& A);
 
 // MSA cmask
 template<typename T, typename U>
-void _mspgemm_msa_cmask_sequential(const sparseMtx<T>& A,
-  const sparseMtx<T>& B,
-  const sparseMtx<U>& M,
-  sparseMtx<T>& C);
-
-template<typename T, typename U>
 void _mspgemm_msa_cmask_parallel_scalar(const sparseMtx<T>& A,
   const sparseMtx<T>& B,
   const sparseMtx<U>& M,
@@ -53,8 +47,7 @@ void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<T>& A,
   sparseMtx<T>& C);
 
 template<typename T, typename U>
-void mspgemm_msa_cmask(bool isParallel,
-  bool isVectorization,
+void mspgemm_msa_cmask(bool isVectorization,
   const sparseMtx<T>& A,
   const sparseMtx<T>& B,
   const sparseMtx<U>& M,
@@ -86,90 +79,6 @@ sparseMtx<T> transpose(const sparseMtx<T>& A) {
   AT.Rst[0] = 0;
 
   return AT;
-}
-
-// MSA cmask sequential
-template<typename T, typename U>
-void _mspgemm_msa_cmask_sequential(const sparseMtx<T>& A, const sparseMtx<T>& B, const sparseMtx<U>& M, sparseMtx<T>& C) {
-  MSA<T> accum(B.n);
-  std::vector<int> changed_states;
-  changed_states.reserve(B.n);
-
-  for (size_t i = 0; i < A.m; ++i) {
-    int m_min = M.Rst[i];
-    int m_max = M.Rst[i + 1];
-    int row_nz = 0;
-
-    for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
-      int k = A.Col[t];
-      int b_min = B.Rst[k];
-      int b_max = B.Rst[k + 1];
-
-      for (int j = b_min; j < b_max; ++j) {
-        if (accum.state[B.Col[j]] == MSA<T>::UNALLOWED) {
-          accum.state[B.Col[j]] = MSA<T>::ALLOWED;
-          changed_states.push_back(B.Col[j]);
-          ++row_nz;
-        }
-      }
-    }
-    for (int j = m_min; j < m_max; ++j) {
-      if (accum.state[M.Col[j]] == MSA<T>::ALLOWED)
-        --row_nz;
-    }
-    C.Rst[i + 1] = row_nz;
-
-    for (int col_idx : changed_states)
-      accum.state[col_idx] = MSA<T>::UNALLOWED;
-    changed_states.clear();
-  }
-  C.Rst[0] = 0;
-  for (int i = 1; i < A.m; ++i)
-    C.Rst[i + 1] += C.Rst[i];
-  if (C.Rst[A.m] > C.nz)
-    C.resize_vals(C.Rst[A.m]);
-  C.nz = C.Rst[A.m];
-
-  constexpr T zero = T(0);
-  for (size_t i = 0; i < accum.len; ++i)
-    accum.state[i] = MSA<T>::ALLOWED;
-
-  for (size_t i = 0; i < A.m; ++i) {
-    int m_min = M.Rst[i];
-    int m_max = M.Rst[i + 1];
-
-    for (size_t j = m_min; j < m_max; ++j)
-      accum.state[M.Col[j]] = MSA<T>::UNALLOWED;
-
-    for (int t = A.Rst[i]; t < A.Rst[i + 1]; ++t) {
-      int k = A.Col[t];
-      int b_pos = B.Rst[k];
-      int b_max = B.Rst[k + 1];
-      T   a_val = A.Val[t];
-
-      for (int j = b_pos; j < b_max; ++j) {
-        if (accum.state[B.Col[j]] == MSA<T>::ALLOWED) {
-          accum.state[B.Col[j]] = MSA<T>::SET;
-          changed_states.push_back(B.Col[j]);
-          accum.value[B.Col[j]] = a_val * B.Val[j];
-        }
-        else if (accum.state[B.Col[j]] == MSA<T>::SET)
-          accum.value[B.Col[j]] += a_val * B.Val[j];
-      }
-    }
-
-    int c_pos = C.Rst[i];
-    sort(changed_states.begin(), changed_states.end());
-    for (int col_idx : changed_states) {
-      C.Col[c_pos] = col_idx;
-      C.Val[c_pos++] = accum.value[col_idx];
-      accum.value[col_idx] = zero;
-      accum.state[col_idx] = MSA<T>::ALLOWED;
-    }
-    changed_states.clear();
-    for (size_t j = m_min; j < m_max; ++j)
-      accum.state[M.Col[j]] = MSA<T>::ALLOWED;
-  }
 }
 
 // MSA cmask parallel scalar
@@ -302,13 +211,11 @@ inline void _mspgemm_msa_cmask_parallel_vectorized(const sparseMtx<int>& A, cons
 
 // MSA cmask dispatcher
 template<typename T, typename U>
-void mspgemm_msa_cmask(bool isParallel, bool isVectorization, const sparseMtx<T>& A, const sparseMtx<T>& B, const sparseMtx<U>& M, sparseMtx<T>& C) {
+void mspgemm_msa_cmask(bool isVectorization, const sparseMtx<T>& A, const sparseMtx<T>& B, const sparseMtx<U>& M, sparseMtx<T>& C) {
   C.resize_rows(M.m);
   C.n = M.n;
 
-  if (!isParallel)
-    _mspgemm_msa_cmask_sequential(A, B, M, C);
-  else if (isVectorization)
+  if (isVectorization)
     _mspgemm_msa_cmask_parallel_vectorized(A, B, M, C);
   else
     _mspgemm_msa_cmask_parallel_scalar(A, B, M, C);
