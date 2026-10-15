@@ -79,7 +79,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
-      mspgemm_mca<int>(true, true, TestMtx, TestMtx, TestMtx, MxmResult);
+      mspgemm_mca<int>(true, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
@@ -90,7 +90,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
-      mspgemm_mca<int>(true, false, TestMtx, TestMtx, TestMtx, MxmResult);
+      mspgemm_mca<int>(false, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
@@ -101,7 +101,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
-      mspgemm_msa<int>(true, true, TestMtx, TestMtx, TestMtx, MxmResult);
+      mspgemm_msa<int>(true, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
@@ -112,7 +112,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
-      mspgemm_msa<int>(true, false, TestMtx, TestMtx, TestMtx, MxmResult);
+      mspgemm_msa<int>(false, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
@@ -123,7 +123,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
-      mspgemm_heap<int>(true, true, TestMtx, TestMtx, TestMtx, MxmResult);
+      mspgemm_heap<int>(true, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
@@ -134,7 +134,7 @@ int launch_test(const sparseMtx<int> &gr, const GraphInfo &info, int argc, const
     min_time = LLONG_MAX;
     for(size_t i = 0; i < COUNT_REPEAT; ++i){
       start = chrono::steady_clock::now();
-      mspgemm_heap<int>(true, false, TestMtx, TestMtx, TestMtx, MxmResult);
+      mspgemm_heap<int>(false, TestMtx, TestMtx, TestMtx, MxmResult);
       finish = chrono::steady_clock::now();
       time = chrono::duration_cast<chrono::milliseconds>(finish - start).count();
       if(time<min_time) min_time = time;
