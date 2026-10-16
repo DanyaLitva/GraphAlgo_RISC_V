@@ -295,20 +295,19 @@ public:
         FILE *fp = fopen(filename, "wb");
         if (fp == NULL)
             return -1;
-        
-        fwrite(matcode, 1, 1, fp);
-        fwrite(matcode + 1, 1, 1, fp);
-        fwrite(matcode + 2, 1, 1, fp);
-        fwrite(matcode + 3, 1, 1, fp);
-        fwrite(&m, sizeof(size_t), 1, fp);
-        fwrite(&n, sizeof(size_t), 1, fp);
-        fwrite(&nz, sizeof(size_t), 1, fp);
-        fwrite(Rst, sizeof(int), m+1, fp);
-        fwrite(Col, sizeof(int), nz, fp);
-        fwrite(Val, sizeof(ValT), nz, fp);
 
-        fclose(fp);
-        return 0;
+        bool success =
+            fwrite(matcode, 1, sizeof(MM_typecode), fp) == sizeof(MM_typecode) &&
+            fwrite(&m, sizeof(size_t), 1, fp) == 1 &&
+            fwrite(&n, sizeof(size_t), 1, fp) == 1 &&
+            fwrite(&nz, sizeof(size_t), 1, fp) == 1 &&
+            fwrite(Rst, sizeof(int), m + 1, fp) == m + 1 &&
+            fwrite(Col, sizeof(int), nz, fp) == nz &&
+            fwrite(Val, sizeof(ValT), nz, fp) == nz;
+
+        if (fclose(fp) != 0)
+            success = false;
+        return success ? 0 : -1;
     }
 
     int write_crs_to_mtx(const char *filename) {

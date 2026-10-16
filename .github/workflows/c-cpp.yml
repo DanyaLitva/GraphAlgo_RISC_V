@@ -2,9 +2,7 @@ name: C/C++ CI
 
 on:
   push:
-    branches: [ "master" ]
   pull_request:
-    branches: [ "master" ]
 
 jobs:
   build:
@@ -15,3 +13,22 @@ jobs:
     - uses: actions/checkout@v4
     - name: make test
       run: make test
+
+  memory-check:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Configure with AddressSanitizer
+      run: >
+        cmake -S . -B build-sanitized
+        -DCMAKE_BUILD_TYPE=Debug
+        -DCMAKE_CXX_FLAGS="-fsanitize=address -fno-omit-frame-pointer"
+        -DCMAKE_EXE_LINKER_FLAGS="-fsanitize=address"
+    - name: Build tests
+      run: cmake --build build-sanitized --target algorithm_tests --parallel 2
+    - name: Run tests with leak detection
+      env:
+        ASAN_OPTIONS: detect_leaks=1:halt_on_error=1
+        OMP_NUM_THREADS: 2
+      run: ctest --test-dir build-sanitized --output-on-failure

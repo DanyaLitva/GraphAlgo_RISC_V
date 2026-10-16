@@ -4,6 +4,9 @@ HEAP_LMUL:=1
 BUILD_DIR := build
 k:=3
 
+.PHONY: default release debug rvv rvv-native clean rebuild to_bin test test_rvv \
+	k_truss_test k_truss_all_test triangle_test triangle_all_test mxm_test mxm_all_test
+
 release:
 	mkdir -p $(BUILD_DIR) && \
 	cd $(BUILD_DIR) && \
@@ -33,18 +36,21 @@ clean:
 
 rebuild: clean release
 
-to_bin:
-	for g in $(ALL_GRAPHS); do \
-		./build/grAlgo ./graphs/$$g.mtx log.txt to_bin; \
+to_bin: release
+	set -e; for g in $(ALL_GRAPHS); do \
+		./$(BUILD_DIR)/convert_to_bin ./graphs/$$g.mtx; \
 	done
 
-test:
-	$(MAKE) && \
+test: release
+	cd $(BUILD_DIR) && ctest --output-on-failure
 	echo && echo && echo run tests: && \
 	echo graph,mca_rvv,mca_scalar,msa_rvv,msa_scalar,heap_rvv,heap_scalar && \
 	./build/mxm_test ./graphs/netherlands_osm.mtx log.txt && \
 	./build/triangle_test ./graphs/netherlands_osm.mtx log.txt && \
 	./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3
+
+test_rvv: rvv-native
+	cd $(BUILD_DIR) && ctest --output-on-failure
 
 #Performance tests
 SMALL_GRAPHS := ecology1 raefsky3 G3_circuit netherlands_osm mac_econ_fwd500
