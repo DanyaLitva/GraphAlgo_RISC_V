@@ -853,11 +853,112 @@ void _mspgemm_heap_parallel_scalar(const sparseMtx<T>& A, const sparseMtx<T>& B,
   }
 }
 
-// Heap parallel vectorized 
+// Heap parallel vectorized (generic)
 template<typename T, typename U>
 void _mspgemm_heap_parallel_vectorized(const sparseMtx<T>& A, const sparseMtx<T>& B,
   const sparseMtx<U>& M, sparseMtx<T>& C) {
+#ifdef USE_RVV
+  const size_t A_m = A.m;
+  const int* A_Rst = A.Rst;
+  const int* A_Col = A.Col;
+  const T* A_Val = A.Val;
+  const int* B_Rst = B.Rst;
+  const int* B_Col = B.Col;
+  const T* B_Val = B.Val;
+  const int* M_Rst = M.Rst;
+  const int* M_Col = M.Col;
+  T* C_Val = C.Val;
+  const size_t C_nz = C.nz;
+
+  memset(C_Val, 0, C_nz * sizeof(T));
+  size_t max_row_len = 0;
+#pragma omp parallel for reduction(max:max_row_len)
+  for (size_t i = 0; i < A_m; ++i) {
+    size_t len = A_Rst[i + 1] - A_Rst[i];
+    if (len > max_row_len) max_row_len = len;
+  }
+
+#pragma omp parallel
+  {
+    int m_pos;
+    int m_col;
+    int m_max_pos;
+    std::vector<heap_iterator<T>> heap_vec;
+    heap_vec.reserve(max_row_len);
+    heap_iterator<T> iter;
+
+#pragma omp for schedule(dynamic, 32)
+    for (size_t i = 0; i < A_m; ++i) {
+      const int row_start = A_Rst[i];
+      const int row_end = A_Rst[i + 1];
+      const int mask_start = M_Rst[i];
+      const int mask_end = M_Rst[i + 1];
+      if (mask_start == mask_end)
+        continue;
+
+      heap_vec.clear();
+      for (int j = row_start; j < row_end; ++j) {
+        int k = B_Rst[A_Col[j]];
+        int b_max = B_Rst[A_Col[j] + 1];
+        if (k < b_max)
+          heap_vec.emplace_back(k, b_max, B_Col[k], A_Val[j]);
+      }
+      std::make_heap(heap_vec.begin(), heap_vec.end());
+
+      m_pos = mask_start;
+      m_max_pos = mask_end;
+      if (m_pos < m_max_pos)
+        m_col = M_Col[m_pos];
+
+      while (!heap_vec.empty()) {
+        iter = heap_vec.front();
+        std::pop_heap(heap_vec.begin(), heap_vec.end());
+        heap_vec.pop_back();
+
+        bool matched = false;
+        while (m_pos < m_max_pos) {
+          size_t vl = __riscv_vsetvl_e32m1(m_max_pos - m_pos);
+          vint32m1_t v_m_cols = __riscv_vle32_v_i32m1(&M_Col[m_pos], vl);
+          vbool32_t v_match = __riscv_vmseq_vx_i32m1_b32(v_m_cols, iter.b_col, vl);
+          long match_idx = __riscv_vfirst_m_b32(v_match, vl);
+
+          if (match_idx >= 0) {
+            m_pos += match_idx;
+            m_col = M_Col[m_pos];
+            matched = true;
+            break;
+          } else {
+            if (M_Col[m_pos + vl - 1] < iter.b_col) {
+              m_pos += vl;
+            } else {
+              if (m_pos < m_max_pos)
+                m_col = M_Col[m_pos];
+              break;
+            }
+          }
+        }
+
+        if (m_pos == m_max_pos)
+          break;
+
+        if (matched && m_col == iter.b_col && iter.b_pos < iter.b_max_pos)
+          C_Val[m_pos] += iter.val * B_Val[iter.b_pos];
+
+        ++iter.b_pos;
+        while (iter.b_pos < iter.b_max_pos && B_Col[iter.b_pos] < m_col)
+          ++iter.b_pos;
+        
+        if (iter.b_pos < iter.b_max_pos) {
+          iter.b_col = B_Col[iter.b_pos];
+          heap_vec.push_back(iter);
+          std::push_heap(heap_vec.begin(), heap_vec.end());
+        }
+      }
+    }
+  }
+#else
   _mspgemm_heap_parallel_scalar(A, B, M, C);
+#endif
 }
 
 template<>
