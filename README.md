@@ -13,5 +13,5 @@
 > ./build/mxm_test ./graphs/netherlands_osm.mtx log.txt - запустить тест умножения матриц  
 > ./build/triangle_test ./graphs/netherlands_osm.mtx log.txt - запустить тест подсчёта треугольников  
 > ./build/k_truss_test ./graphs/netherlands_osm.mtx log.txt 3 - запустить тест k-truss (последний аргумент — значение k)  
-> make mxm_test|triangle_test|k_truss_test - запустить тест на SMALL_GRAPHS из Makefile  
-> make mxm_all_test|triangle_all_test|k_truss_all_test - запустить тест на ALL_GRAPHS из Makefile
+> make mxm_test|triangle_test|k_truss_test - запустить набор тестов на SMALL_GRAPHS из Makefile  
+> make mxm_all_test|triangle_all_test|k_truss_all_test - запустить набор тестов на ALL_GRAPHS из Makefile
